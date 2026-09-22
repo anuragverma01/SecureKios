@@ -62,8 +62,10 @@ jobs:
           /p:Platform=$env:Platform
           /p:PublishProfile=$env:PublishProfile
           /p:RuntimeIdentifier=win-x64
+          /p:SelfContained=true
+          /p:WindowsAppSDKSelfContained=true
 
-      - name: Build and package unsigned MSIX
+      - name: Build and package self-contained MSIX
         shell: pwsh
         run: >-
           msbuild $env:App_Project
@@ -77,6 +79,9 @@ jobs:
           /p:AppxBundle=Never
           /p:AppxPackageSigningEnabled=false
           /p:GenerateAppxPackageOnBuild=true
+          /p:RuntimeIdentifier=win-x64
+          /p:SelfContained=true
+          /p:WindowsAppSDKSelfContained=true
 
       - name: Locate and stage unsigned MSIX
         id: locate
@@ -104,8 +109,43 @@ jobs:
           Get-ChildItem -LiteralPath $artifactDir -Directory -ErrorAction SilentlyContinue |
             Remove-Item -Recurse -Force
 
-          Write-Host "Staged unsigned MSIX at: $finalMsix"
+          Write-Host "Staged MSIX at: $finalMsix"
           "MSIX_PATH=$finalMsix" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Verify self-contained payload
+        shell: pwsh
+        run: |
+          $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($msixPath)
+          try {
+            $entries = $archive.Entries | ForEach-Object { $_.FullName.ToLowerInvariant() }
+
+            # Self-contained .NET: coreclr.dll must be present in the package
+            $hasCoreCLR = ($entries -like '*coreclr.dll*').Count -gt 0
+            # Self-contained Windows App SDK: Microsoft.ui.xaml.dll must be present
+            $hasWinUI   = ($entries -like '*microsoft.ui.xaml.dll*').Count -gt 0
+
+            Write-Host "=== SELF-CONTAINED PAYLOAD VERIFICATION ==="
+            Write-Host "coreclr.dll present  : $hasCoreCLR  (required: true)"
+            Write-Host "microsoft.ui.xaml.dll: $hasWinUI   (required: true)"
+
+            $msixSize = (Get-Item -LiteralPath $msixPath).Length
+            $msixSizeMB = [math]::Round($msixSize / 1MB, 2)
+            Write-Host "MSIX size: $msixSizeMB MB ($msixSize bytes)"
+
+            if (-not $hasCoreCLR) {
+              throw "SELF-CONTAINED VERIFICATION FAILED: coreclr.dll not found in MSIX. The package is still framework-dependent for .NET."
+            }
+            if (-not $hasWinUI) {
+              throw "SELF-CONTAINED VERIFICATION FAILED: microsoft.ui.xaml.dll not found in MSIX. The package still requires an external Windows App SDK runtime."
+            }
+
+            Write-Host "VERIFICATION PASSED: MSIX is self-contained for .NET and Windows App SDK."
+          } finally {
+            $archive.Dispose()
+          }
 
       - name: Sign MSIX with development certificate
         shell: pwsh
@@ -154,7 +194,7 @@ jobs:
           Write-Host ""
           Write-Host "=== ARTIFACT FILES ==="
           Get-ChildItem -LiteralPath $artifactDir -File |
-            Select-Object Name, Length |
+            Select-Object Name, @{N='Size (MB)';E={[math]::Round($_.Length/1MB,2)}} |
             Format-Table -AutoSize | Out-String | Write-Host
 
       - name: Upload SecureKiosk MSIX
