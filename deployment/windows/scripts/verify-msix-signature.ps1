@@ -52,6 +52,20 @@ function Get-SignTool {
 }
 
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'This script must run on Windows.' }
+function Test-CodeSigningEku([System.Security.Cryptography.X509Certificates.X509Certificate2]$Cert) {
+  if ($Cert.PSObject.Properties['EnhancedKeyUsageList']) {
+    return ($Cert.EnhancedKeyUsageList.ObjectId.Value -contains '1.3.6.1.5.5.7.3.3')
+  }
+  $ext = $Cert.Extensions['2.5.29.37']
+  if ($null -ne $ext) {
+    $eku = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]$ext
+    foreach ($usage in $eku.EnhancedKeyUsages) {
+      if ($usage.Value -eq '1.3.6.1.5.5.7.3.3') { return $true }
+    }
+  }
+  return $false
+}
+
 if (-not (Test-Path -LiteralPath $MsixPath -PathType Leaf)) { throw "MSIX package was not found: $MsixPath" }
 if (-not (Test-Path -LiteralPath $CertificatePath -PathType Leaf)) { throw "Public certificate was not found: $CertificatePath" }
 $signTool = Get-SignTool
@@ -62,7 +76,7 @@ $manifestPublisher = Get-MsixManifestPublisher $resolvedMsix
 $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new((Resolve-Path -LiteralPath $CertificatePath).Path)
 if ($certificate.Subject -cne $manifestPublisher) { throw 'Certificate Subject does not exactly match the MSIX manifest Publisher.' }
 if ($certificate.NotBefore -gt (Get-Date) -or $certificate.NotAfter -le (Get-Date)) { throw 'The development certificate is not currently valid.' }
-if ($certificate.EnhancedKeyUsageList.ObjectId.Value -notcontains '1.3.6.1.5.5.7.3.3') { throw 'The certificate is not a code-signing certificate.' }
+if (-not (Test-CodeSigningEku $certificate)) { throw 'The certificate is not a code-signing certificate.' }
 
 & $signTool.Source verify /pa /v $resolvedMsix
 if ($LASTEXITCODE -ne 0) { throw "MSIX signature verification failed with exit code $LASTEXITCODE. Trust the intended development certificate before verifying local test packages." }
