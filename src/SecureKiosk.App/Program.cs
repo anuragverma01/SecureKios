@@ -11,13 +11,13 @@ namespace SecureKiosk.App;
 
 public static partial class Program
 {
-    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool AttachConsole(int dwProcessId);
+    private static extern bool AttachConsole(int dwProcessId);
 
-    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool FreeConsole();
+    private static extern bool FreeConsole();
 
     private const int ATTACH_PARENT_PROCESS = -1;
 

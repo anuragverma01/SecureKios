@@ -18,9 +18,9 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
         _audit = audit;
     }
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool ExitWindowsEx(uint uFlags, uint dwReason);
+    private static extern bool ExitWindowsEx(uint uFlags, uint dwReason);
 
     private const uint EWX_LOGOFF = 0x00000000;
     private const uint EWX_FORCEIFHUNG = 0x00000010;
