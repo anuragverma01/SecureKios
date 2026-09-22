@@ -27,6 +27,33 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
+      - name: Add Windows SDK / SignTool to PATH
+        shell: pwsh
+        run: |
+          $kitsRoots = @(
+            "${env:ProgramFiles(x86)}\Windows Kits\10\bin",
+            "$env:ProgramFiles\Windows Kits\10\bin"
+          )
+          $found = $null
+          foreach ($root in $kitsRoots) {
+            if (Test-Path $root) {
+              $found = Get-ChildItem -Path $root -Filter 'signtool.exe' -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '[\\/]x64[\\/]signtool\.exe$' } |
+                Sort-Object FullName -Descending |
+                Select-Object -First 1
+              if ($found) { break }
+            }
+          }
+          if ($found) {
+            $binDir = $found.DirectoryName
+            Write-Host "Found SignTool at: $($found.FullName)"
+            Write-Host "Adding to GITHUB_PATH: $binDir"
+            $binDir | Out-File -FilePath $env:GITHUB_PATH -Append
+            "$binDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            Write-Warning "signtool.exe not found in Windows Kits"
+          }
+
       - name: Restore SecureKiosk.App for packaging
         shell: pwsh
         run: >-
@@ -46,16 +73,19 @@ jobs:
           /p:Platform=$env:Platform
           /p:PublishProfile=$env:PublishProfile
           /p:EnableMsixTooling=true
-          /p:AppxPackageDir="$env:GITHUB_WORKSPACE\artifacts"
+          /p:AppxPackageDir="$env:GITHUB_WORKSPACE/artifacts/"
           /p:UapAppxPackageBuildMode=SideloadOnly
           /p:AppxBundle=Never
           /p:AppxPackageSigningEnabled=false
           /p:GenerateAppxPackageOnBuild=true
 
-      - name: Locate unsigned MSIX
+      - name: Locate and stage unsigned MSIX
         id: locate
         shell: pwsh
         run: |
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+
           $packages = @(
             Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -File -Filter '*.msix' -Recurse -Force -ErrorAction SilentlyContinue |
               Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }
@@ -63,76 +93,77 @@ jobs:
           if ($packages.Count -eq 0) {
             throw 'MSIX generation failed: no .msix file was found under the workspace.'
           }
-          $msixPath = $packages[0].FullName
-          Write-Host "Found unsigned MSIX: $msixPath"
-          "MSIX_PATH=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $sourceMsix = $packages[0].FullName
+          Write-Host "Found generated MSIX: $sourceMsix"
+
+          $finalMsix = Join-Path $artifactDir 'SecureKiosk.App_1.0.0.0_x64.msix'
+          if (-not [string]::Equals($sourceMsix, $finalMsix, [StringComparison]::OrdinalIgnoreCase)) {
+            Copy-Item -LiteralPath $sourceMsix -Destination $finalMsix -Force
+          }
+
+          # Clean up any nested directories inside artifacts (like test folders)
+          Get-ChildItem -LiteralPath $artifactDir -Directory -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force
+
+          Write-Host "Staged unsigned MSIX at: $finalMsix"
+          "MSIX_PATH=$finalMsix" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Sign MSIX with development certificate
         shell: pwsh
         run: |
           $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
           & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\sign-msix-dev.ps1" `
             -MsixPath $msixPath `
-            -CertificateOutputPath "$env:GITHUB_WORKSPACE\artifacts\SecureKiosk-Dev.cer"
+            -CertificateOutputPath $cerPath
 
       - name: Trust development certificate and verify signature
         shell: pwsh
         run: |
-          $cerPath = "$env:GITHUB_WORKSPACE\artifacts\SecureKiosk-Dev.cer"
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
           $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
 
-          # Import the public certificate into TrustedPeople so signtool verify /pa works
-          Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\trust-dev-certificate.ps1" `
+            -CertificatePath $cerPath `
+            -MsixPath $msixPath
 
-          # Run the existing verification script
           & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\verify-msix-signature.ps1" `
             -MsixPath $msixPath `
             -CertificatePath $cerPath
 
-      - name: Stage signed artifact
+      - name: Verify and report artifact details
         shell: pwsh
         run: |
-          $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
-          $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
-          $cerPath = "$artifactDir\SecureKiosk-Dev.cer"
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $msixPath = Join-Path $artifactDir 'SecureKiosk.App_1.0.0.0_x64.msix'
+          $cerPath = Join-Path $artifactDir 'SecureKiosk-Dev.cer'
 
-          # Ensure the signed MSIX is in the artifacts directory
-          $targetMsix = Join-Path $artifactDir (Split-Path -Leaf $msixPath)
-          if (-not [string]::Equals($msixPath, $targetMsix, [StringComparison]::OrdinalIgnoreCase)) {
-            Copy-Item -LiteralPath $msixPath -Destination $targetMsix -Force
-          }
-
-          # Verify both files exist
-          if (-not (Test-Path -LiteralPath $targetMsix -PathType Leaf)) {
-            throw "Signed MSIX not found at: $targetMsix"
+          if (-not (Test-Path -LiteralPath $msixPath -PathType Leaf)) {
+            throw "Expected MSIX missing: $msixPath"
           }
           if (-not (Test-Path -LiteralPath $cerPath -PathType Leaf)) {
-            throw "Development certificate not found at: $cerPath"
+            throw "Expected CER missing: $cerPath"
           }
 
-          # Report what the artifact contains
-          Write-Host '=== Artifact contents ==='
-          Get-ChildItem -LiteralPath $artifactDir -File |
-            Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
-
-          # Report certificate and signature details
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+          Write-Host "=== DEVELOPMENT SIGNING VERIFICATION ==="
           Write-Host "Manifest Publisher: CN=SecureKiosk"
           Write-Host "Certificate Subject: $($cert.Subject)"
           Write-Host "Certificate Thumbprint: $($cert.Thumbprint)"
           Write-Host "Certificate Validity: $($cert.NotBefore.ToString('u')) to $($cert.NotAfter.ToString('u'))"
-
-          # Remove any non-msix/non-cer files from artifacts
+          Write-Host "MSIX Signature Status: VERIFIED"
+          Write-Host ""
+          Write-Host "=== ARTIFACT FILES ==="
           Get-ChildItem -LiteralPath $artifactDir -File |
-            Where-Object { $_.Extension -notin @('.msix', '.cer') } |
-            Remove-Item -Force
+            Select-Object Name, Length |
+            Format-Table -AutoSize | Out-String | Write-Host
 
       - name: Upload SecureKiosk MSIX
         uses: actions/upload-artifact@v4
         with:
           name: SecureKiosk-msix
           path: |
-            ${{ github.workspace }}/artifacts/*.msix
-            ${{ github.workspace }}/artifacts/*.cer
+            ${{ github.workspace }}/artifacts/SecureKiosk.App_1.0.0.0_x64.msix
+            ${{ github.workspace }}/artifacts/SecureKiosk-Dev.cer
           if-no-files-found: error
           retention-days: 14

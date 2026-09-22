@@ -24,10 +24,37 @@ function Get-MsixManifestPublisher([string]$Path) {
   } finally { $archive.Dispose() }
 }
 
+function Get-SignTool {
+  $signTool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+  if ($null -ne $signTool) { return $signTool }
+
+  $kitsRoots = @(
+    "${env:ProgramFiles(x86)}\Windows Kits\10\bin",
+    "$env:ProgramFiles\Windows Kits\10\bin"
+  )
+  try {
+    $reg = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -ErrorAction SilentlyContinue).KitsRoot10
+    if ($reg) { $kitsRoots += (Join-Path $reg 'bin') }
+  } catch {}
+
+  foreach ($root in $kitsRoots) {
+    if (Test-Path $root) {
+      $found = Get-ChildItem -Path $root -Filter 'signtool.exe' -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match '[\\/]x64[\\/]signtool\.exe$' } |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+      if ($found) {
+        return [pscustomobject]@{ Source = $found.FullName }
+      }
+    }
+  }
+  return $null
+}
+
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'This script must run on Windows.' }
 if (-not (Test-Path -LiteralPath $MsixPath -PathType Leaf)) { throw "MSIX package was not found: $MsixPath" }
 if (-not (Test-Path -LiteralPath $CertificatePath -PathType Leaf)) { throw "Public certificate was not found: $CertificatePath" }
-$signTool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+$signTool = Get-SignTool
 if ($null -eq $signTool) { throw 'signtool.exe was not found. Install the Windows SDK Signing Tools feature and retry.' }
 
 $resolvedMsix = (Resolve-Path -LiteralPath $MsixPath).Path
