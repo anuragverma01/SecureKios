@@ -27,9 +27,15 @@ jobs:
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore solution
+      - name: Restore SecureKiosk.App for packaging
         shell: pwsh
-        run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+        run: >-
+          msbuild $env:App_Project
+          /t:Restore
+          /p:Configuration=$env:Configuration
+          /p:Platform=$env:Platform
+          /p:PublishProfile=$env:PublishProfile
+          /p:RuntimeIdentifier=win-x64
 
       - name: Build and package unsigned MSIX
         shell: pwsh
