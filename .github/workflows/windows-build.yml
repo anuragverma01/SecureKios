@@ -48,8 +48,7 @@ jobs:
             $binDir = $found.DirectoryName
             Write-Host "Found SignTool at: $($found.FullName)"
             Write-Host "Adding to GITHUB_PATH: $binDir"
-            $binDir | Out-File -FilePath $env:GITHUB_PATH -Append
-            "$binDir;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Append
+            $binDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           } else {
             Write-Warning "signtool.exe not found in Windows Kits"
           }
