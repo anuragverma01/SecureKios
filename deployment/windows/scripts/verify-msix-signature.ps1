@@ -93,6 +93,9 @@ if (-not (Test-CodeSigningEku $certificate)) { throw 'The certificate is not a c
 & $signTool.Source verify /pa /v $resolvedMsix
 if ($LASTEXITCODE -ne 0) { throw "MSIX signature verification failed with exit code $LASTEXITCODE. Trust the intended development certificate before verifying local test packages." }
 
+$notBefore = $certificate.NotBefore.ToString('u')
+$notAfter = $certificate.NotAfter.ToString('u')
 Write-Host "Signature is valid. Manifest Publisher: $manifestPublisher"
 Write-Host "Certificate Subject: $($certificate.Subject)"
-Write-Host "Certificate validity: $($certificate.NotBefore:u) to $($certificate.NotAfter:u)"
+Write-Host "Certificate Thumbprint: $($certificate.Thumbprint)"
+Write-Host "Certificate validity: $notBefore to $notAfter"
