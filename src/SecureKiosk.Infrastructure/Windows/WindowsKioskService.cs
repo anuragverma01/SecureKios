@@ -165,15 +165,11 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
             return new KioskOperationResult(false, "Administrator privileges are required to remove kiosk mode.");
         }
 
-        bool removedAny = false;
-
-        // Remove Shell Launcher
-        var slResult = RemoveShellLauncher();
-        if (slResult.Success) removedAny = true;
+        // Remove Shell Launcher if active
+        RemoveShellLauncher();
 
         // Remove per-user shell registry overrides
-        var regResult = RemoveRegistryShell(kioskUser);
-        if (regResult.Success) removedAny = true;
+        RemoveRegistryShell(kioskUser);
 
         await _audit.WriteAsync("kiosk_removed", cancellationToken).ConfigureAwait(false);
         return new KioskOperationResult(true, "Kiosk mode has been removed. Explorer is restored as the default desktop shell.");
@@ -321,10 +317,25 @@ Set-ItemProperty -Path $key -Name 'Shell' -Value '""{appPath}""' -Force
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(kioskUser))
+            {
+                try
+                {
+                    var account = new NTAccount(kioskUser);
+                    string targetSid = ((SecurityIdentifier)account.Translate(typeof(SecurityIdentifier))).Value;
+                    using var userWinlogon = Registry.Users.OpenSubKey($@"{targetSid}\Software\Microsoft\Windows NT\CurrentVersion\Winlogon", writable: true);
+                    if (userWinlogon?.GetValue("Shell") is not null)
+                    {
+                        userWinlogon.DeleteValue("Shell", throwOnMissingValue: false);
+                    }
+                }
+                catch { }
+            }
+
             // Remove from current user if run as kiosk user, or all loaded users
             foreach (var subKeyName in Registry.Users.GetSubKeyNames())
             {
-                if (subKeyName.StartsWith("S-1-5-21-"))
+                if (subKeyName.StartsWith("S-1-5-21-", StringComparison.Ordinal))
                 {
                     try
                     {
