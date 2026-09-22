@@ -1,21 +1,63 @@
+[CmdletBinding()]
 param(
-  [Parameter(Mandatory)][string]$KioskUser,
-  [Parameter(Mandatory)][string]$ApplicationPath,
-  [string]$CredentialToolPath = "$env:ProgramFiles\SecureKiosk\SecureKiosk.CredentialTool.exe",
+  [Parameter()][string]$KioskUser = $env:USERNAME,
+  [Parameter()][string]$ApplicationPath,
   [string]$ConfigurationPath = "$PSScriptRoot\..\shell-launcher\SecureKiosk.xml"
 )
+
 . "$PSScriptRoot\common.ps1"
-Assert-Administrator; Assert-SupportedEdition | Out-Null
-if (-not (Test-Path $ApplicationPath)) { throw "Application not found: $ApplicationPath" }
-if (-not (Test-Path $CredentialToolPath)) { throw "Credential utility was not found: $CredentialToolPath. Refusing to enable kiosk mode without validating an administrator credential." }
-& $CredentialToolPath status
-if ($LASTEXITCODE -ne 0) { throw 'Refusing to enable kiosk mode because no valid administrator credential is provisioned.' }
+Assert-Administrator
+
+# Auto-detect application path from installed MSIX if not explicitly passed
+if ([string]::IsNullOrWhiteSpace($ApplicationPath)) {
+  $pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($pkg -and (Test-Path (Join-Path $pkg.InstallLocation 'SecureKiosk.App.exe'))) {
+    $ApplicationPath = Join-Path $pkg.InstallLocation 'SecureKiosk.App.exe'
+  } else {
+    $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\SecureKiosk.exe'
+    if (Test-Path $alias) {
+      $ApplicationPath = $alias
+    } else {
+      throw 'SecureKiosk MSIX package is not installed. Install the SecureKiosk MSIX first, or specify -ApplicationPath.'
+    }
+  }
+}
+
+if (-not (Test-Path $ApplicationPath)) { throw "Application executable not found: $ApplicationPath" }
+
+# Validate administrator credential in ProgramData
+$credFile = Join-Path $env:ProgramData 'SecureKiosk\credential.bin'
+if (-not (Test-Path $credFile)) {
+  Write-Host "No administrator exit credential provisioned. Launching exit code setup..."
+  & $ApplicationPath --provision-exit-code
+  if (-not (Test-Path $credFile)) {
+    throw 'Refusing to enable kiosk mode because no administrator exit credential was provisioned.'
+  }
+}
+
 $sid = Get-UserSid $KioskUser
-$xml = Get-Content -Raw -Path $ConfigurationPath
-$shellPath = [System.Security.SecurityElement]::Escape(('"' + $ApplicationPath + '"'))
-$xml = $xml.Replace('__SECUREKIOSK_PATH__', $shellPath).Replace('__KIOSK_USER_SID__', $sid)
-$bridge = Get-AssignedAccessBridge
-$bridge.ShellLauncher = [System.Net.WebUtility]::HtmlEncode($xml)
-Set-CimInstance -CimInstance $bridge | Out-Null
-Write-Host 'Shell Launcher configuration applied. Sign out or restart to activate the kiosk shell.'
-Write-Host 'Keyboard Filter and application allowlisting must be configured and validated according to the administrator guide.'
+$edition = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').EditionID
+$supportedEnterprise = @('Enterprise','EnterpriseS','Education','IoTEnterprise','IoTEnterpriseS')
+
+if ($edition -in $supportedEnterprise) {
+  try {
+    $xml = Get-Content -Raw -Path $ConfigurationPath
+    $shellPath = [System.Security.SecurityElement]::Escape(('"' + $ApplicationPath + '"'))
+    $xml = $xml.Replace('__SECUREKIOSK_PATH__', $shellPath).Replace('__KIOSK_USER_SID__', $sid)
+    $bridge = Get-AssignedAccessBridge
+    $bridge.ShellLauncher = [System.Net.WebUtility]::HtmlEncode($xml)
+    Set-CimInstance -CimInstance $bridge | Out-Null
+    Write-Host "Shell Launcher v2 configuration applied for '$KioskUser'."
+  } catch {
+    Write-Warning "Shell Launcher WMI bridge failed: $($_.Exception.Message). Falling back to per-user Winlogon shell configuration."
+    Set-RegistryKioskShell -UserSid $sid -ApplicationPath $ApplicationPath
+  }
+} else {
+  Write-Host "Windows edition '$edition' uses per-user Winlogon shell configuration."
+  Set-RegistryKioskShell -UserSid $sid -ApplicationPath $ApplicationPath
+}
+
+Write-Host "============================================================"
+Write-Host "SUCCESS: SecureKiosk is now configured as the dedicated shell for '$KioskUser'."
+Write-Host "Sign out or restart the machine to activate kiosk mode."
+Write-Host "============================================================"

@@ -17,6 +17,11 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        Services = ConfigureServices();
+    }
+
+    public static IServiceProvider ConfigureServices()
+    {
         var services = new ServiceCollection();
 #if DEBUG
         var developmentCode = Environment.GetEnvironmentVariable(DevelopmentExitCredential.EnvironmentVariableName);
@@ -29,11 +34,12 @@ public partial class App : Application
         {
             services.AddSingleton<ISecureCredentialStore>(_ => new DpapiCredentialStore(CredentialPaths.GetDefaultPath()));
         }
+
         var dataRoot = Path.GetDirectoryName(CredentialPaths.GetDefaultPath())!;
         services.AddSingleton<IAuditService>(_ => new JsonLineAuditService(Path.Combine(dataRoot, "audit.jsonl")));
         services.AddSingleton<IExitAuthorizationService, ExitAuthorizationService>();
         services.AddSingleton<IWindowsKioskService, WindowsKioskService>();
-        Services = services.BuildServiceProvider();
+        return services.BuildServiceProvider();
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)

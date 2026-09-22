@@ -1,13 +1,46 @@
+[CmdletBinding()]
 param(
-  [Parameter(Mandatory)][string]$PublishRoot,
-  [Parameter(Mandatory)][string]$KioskUser,
-  [string]$InstallRoot = "$env:ProgramFiles\SecureKiosk"
+  [Parameter()][string]$MsixPath,
+  [string]$CertificatePath,
+  [string]$KioskUser = $env:USERNAME
 )
+
 . "$PSScriptRoot\common.ps1"
-Assert-Administrator; Assert-SupportedEdition | Out-Null
-if (-not (Test-Path (Join-Path $PublishRoot 'SecureKiosk.App.exe'))) { throw "Signed publish output was not found at $PublishRoot" }
-New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
-Copy-Item -Path (Join-Path $PublishRoot '*') -Destination $InstallRoot -Recurse -Force
-& "$PSScriptRoot\setup-kiosk.ps1" -KioskUser $KioskUser -ApplicationPath (Join-Path $InstallRoot 'SecureKiosk.App.exe')
-Write-Host "SecureKiosk installed and Shell Launcher configured at $InstallRoot. Restart/sign out to activate the kiosk shell."
-Write-Host 'This script intentionally does not create a Startup-folder shortcut; Shell Launcher owns startup after sign-in.'
+Assert-Administrator
+
+# 1. Locate MSIX if not provided
+if ([string]::IsNullOrWhiteSpace($MsixPath)) {
+  $candidate = Get-ChildItem -Path (Join-Path $PSScriptRoot '..\..\..\artifacts') -Filter '*.msix' -File -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($candidate) {
+    $MsixPath = $candidate.FullName
+  } else {
+    throw 'Specify -MsixPath with the path to the SecureKiosk MSIX package.'
+  }
+}
+
+if (-not (Test-Path -LiteralPath $MsixPath -PathType Leaf)) {
+  throw "MSIX package not found: $MsixPath"
+}
+
+# 2. Trust development certificate if provided or found
+if ([string]::IsNullOrWhiteSpace($CertificatePath)) {
+  $cerCandidate = Join-Path (Split-Path -Parent $MsixPath) 'SecureKiosk-Dev.cer'
+  if (Test-Path $cerCandidate) { $CertificatePath = $cerCandidate }
+}
+
+if (-not [string]::IsNullOrWhiteSpace($CertificatePath) -and (Test-Path -LiteralPath $CertificatePath -PathType Leaf)) {
+  Write-Host "Trusting development certificate: $CertificatePath"
+  & "$PSScriptRoot\trust-dev-certificate.ps1" -CertificatePath $CertificatePath -MsixPath $MsixPath
+}
+
+# 3. Install the MSIX package
+Write-Host "Installing SecureKiosk MSIX: $MsixPath"
+Add-AppxPackage -Path $MsixPath -ForceUpdateFromAnyVersion
+
+$pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction Stop
+Write-Host "SecureKiosk successfully installed: $($pkg.PackageFullName)"
+
+# 4. Configure kiosk mode if requested
+if ($KioskUser) {
+  & "$PSScriptRoot\setup-kiosk.ps1" -KioskUser $KioskUser
+}

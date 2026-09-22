@@ -11,6 +11,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <PublishProfile>Properties\PublishProfiles\win10-$(Platform).pubxml</PublishProfile>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />

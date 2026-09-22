@@ -5,7 +5,7 @@
     <Profile Id="{6C1660BB-91DF-4A5A-8E4F-2F2AD2E5A8D7}">
       <Shell Shell="__SECUREKIOSK_PATH__" V2:AppType="Desktop" V2:AllAppsFullScreen="true">
         <ReturnCodeActions>
-          <ReturnCodeAction ReturnCode="1" Action="DoNothing" />
+          <ReturnCodeAction ReturnCode="1" Action="Logoff" />
           <ReturnCodeAction ReturnCode="0" Action="RestartShell" />
           <ReturnCodeAction ReturnCode="-1" Action="RestartDevice" />
         </ReturnCodeActions>
