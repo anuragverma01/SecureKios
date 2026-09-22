@@ -52,81 +52,87 @@ jobs:
           /p:AppxPackageSigningEnabled=false
           /p:GenerateAppxPackageOnBuild=true
 
-      - name: Diagnose MSIX generation and stage artifact
+      - name: Locate unsigned MSIX
+        id: locate
         shell: pwsh
         run: |
-          $workspace = $env:GITHUB_WORKSPACE
-          $projectRoot = Join-Path $workspace 'src\SecureKiosk.App'
-          $projectFile = Join-Path $projectRoot 'SecureKiosk.App.csproj'
-          $artifactRoot = Join-Path $workspace 'artifacts'
-
-          Write-Host '--- selected build properties ---'
-          Write-Host "MSBuild:"
-          msbuild -version
-          Write-Host "Configuration=$env:Configuration"
-          Write-Host "Platform=$env:Platform"
-          Write-Host "PublishProfile=$env:PublishProfile"
-          Write-Host "AppxPackageDir=$artifactRoot"
-
-          [xml]$project = Get-Content -LiteralPath $projectFile
-          $propertyGroup = $project.Project.PropertyGroup | Select-Object -First 1
-          Write-Host "EnableMsixTooling=$($propertyGroup.EnableMsixTooling)"
-          Write-Host "ProjectPublishProfile=$($propertyGroup.PublishProfile)"
-          if ($propertyGroup.EnableMsixTooling -ne 'true') {
-            throw 'MSIX generation failed: EnableMsixTooling is not active in SecureKiosk.App.csproj.'
-          }
-
-          Write-Host '--- all generated files under SecureKiosk.App ---'
-          Get-ChildItem -LiteralPath $projectRoot -File -Recurse -Force -ErrorAction SilentlyContinue |
-            Select-Object -ExpandProperty FullName | Write-Host
-
-          Write-Host '--- artifacts, bin, and Packages directories ---'
-          $directoryNames = @('artifacts', 'bin', 'Packages')
-          $directories = @(
-            Get-ChildItem -LiteralPath $workspace -Directory -Recurse -Force -ErrorAction SilentlyContinue |
-              Where-Object { $directoryNames -contains $_.Name }
-          )
-          if ($directories.Count -eq 0) {
-            Write-Host 'No artifacts, bin, or Packages directories were found.'
-          }
-          foreach ($directory in $directories) {
-            Write-Host "[$($directory.FullName)]"
-            Get-ChildItem -LiteralPath $directory.FullName -Force -Recurse -ErrorAction SilentlyContinue |
-              Select-Object FullName, Length, LastWriteTime |
-              Format-Table -AutoSize | Out-String | Write-Host
-          }
-
-          Write-Host '--- every .msix file under the workspace ---'
           $packages = @(
-            Get-ChildItem -LiteralPath $workspace -File -Filter '*.msix' -Recurse -Force -ErrorAction SilentlyContinue |
+            Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -File -Filter '*.msix' -Recurse -Force -ErrorAction SilentlyContinue |
               Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }
           )
           if ($packages.Count -eq 0) {
-            throw 'MSIX generation failed: MSBuild completed, but no .msix file was found anywhere under the GitHub workspace.'
+            throw 'MSIX generation failed: no .msix file was found under the workspace.'
           }
-          $packages | Select-Object -ExpandProperty FullName | Write-Host
+          $msixPath = $packages[0].FullName
+          Write-Host "Found unsigned MSIX: $msixPath"
+          "MSIX_PATH=$msixPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-          New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
-          foreach ($package in $packages) {
-            $destination = Join-Path $artifactRoot $package.Name
-            if (-not [string]::Equals($package.FullName, $destination, [StringComparison]::OrdinalIgnoreCase)) {
-              Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
-            }
+      - name: Sign MSIX with development certificate
+        shell: pwsh
+        run: |
+          $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
+          & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\sign-msix-dev.ps1" `
+            -MsixPath $msixPath `
+            -CertificateOutputPath "$env:GITHUB_WORKSPACE\artifacts\SecureKiosk-Dev.cer"
+
+      - name: Trust development certificate and verify signature
+        shell: pwsh
+        run: |
+          $cerPath = "$env:GITHUB_WORKSPACE\artifacts\SecureKiosk-Dev.cer"
+          $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
+
+          # Import the public certificate into TrustedPeople so signtool verify /pa works
+          Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+
+          # Run the existing verification script
+          & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\verify-msix-signature.ps1" `
+            -MsixPath $msixPath `
+            -CertificatePath $cerPath
+
+      - name: Stage signed artifact
+        shell: pwsh
+        run: |
+          $artifactDir = "$env:GITHUB_WORKSPACE\artifacts"
+          $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
+          $cerPath = "$artifactDir\SecureKiosk-Dev.cer"
+
+          # Ensure the signed MSIX is in the artifacts directory
+          $targetMsix = Join-Path $artifactDir (Split-Path -Leaf $msixPath)
+          if (-not [string]::Equals($msixPath, $targetMsix, [StringComparison]::OrdinalIgnoreCase)) {
+            Copy-Item -LiteralPath $msixPath -Destination $targetMsix -Force
           }
 
-          $stagedPackages = @(
-            Get-ChildItem -LiteralPath $artifactRoot -File -Filter '*.msix' -ErrorAction SilentlyContinue
-          )
-          if ($stagedPackages.Count -eq 0) {
-            throw 'MSIX staging failed: a .msix was found, but no package is present in artifacts.'
+          # Verify both files exist
+          if (-not (Test-Path -LiteralPath $targetMsix -PathType Leaf)) {
+            throw "Signed MSIX not found at: $targetMsix"
           }
-          Write-Host '--- staged packages for upload ---'
-          $stagedPackages | Select-Object -ExpandProperty FullName | Write-Host
+          if (-not (Test-Path -LiteralPath $cerPath -PathType Leaf)) {
+            throw "Development certificate not found at: $cerPath"
+          }
+
+          # Report what the artifact contains
+          Write-Host '=== Artifact contents ==='
+          Get-ChildItem -LiteralPath $artifactDir -File |
+            Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
+
+          # Report certificate and signature details
+          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+          Write-Host "Manifest Publisher: CN=SecureKiosk"
+          Write-Host "Certificate Subject: $($cert.Subject)"
+          Write-Host "Certificate Thumbprint: $($cert.Thumbprint)"
+          Write-Host "Certificate Validity: $($cert.NotBefore.ToString('u')) to $($cert.NotAfter.ToString('u'))"
+
+          # Remove any non-msix/non-cer files from artifacts
+          Get-ChildItem -LiteralPath $artifactDir -File |
+            Where-Object { $_.Extension -notin @('.msix', '.cer') } |
+            Remove-Item -Force
 
       - name: Upload SecureKiosk MSIX
         uses: actions/upload-artifact@v4
         with:
-          name: SecureKiosk-unsigned-msix
-          path: ${{ github.workspace }}/artifacts/*.msix
+          name: SecureKiosk-msix
+          path: |
+            ${{ github.workspace }}/artifacts/*.msix
+            ${{ github.workspace }}/artifacts/*.cer
           if-no-files-found: error
           retention-days: 14
