@@ -42,10 +42,59 @@ jobs:
           /p:AppxPackageSigningEnabled=false
           /p:GenerateAppxPackageOnBuild=true
 
+      - name: Diagnose and stage generated MSIX
+        shell: pwsh
+        run: |
+          $workspace = $env:GITHUB_WORKSPACE
+          $directoryNames = @('artifacts', 'bin', 'Packages')
+          $directories = @(
+            Get-ChildItem -LiteralPath $workspace -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+              Where-Object { $directoryNames -contains $_.Name }
+          )
+
+          Write-Host '--- artifacts, bin, and Packages directories ---'
+          if ($directories.Count -eq 0) {
+            Write-Host 'No matching output directories were found.'
+          }
+          foreach ($directory in $directories) {
+            Write-Host "[$($directory.FullName)]"
+            Get-ChildItem -LiteralPath $directory.FullName -Force -Recurse -ErrorAction SilentlyContinue |
+              Select-Object FullName, Length, LastWriteTime |
+              Format-Table -AutoSize | Out-String | Write-Host
+          }
+
+          Write-Host '--- every .msix file under the workspace ---'
+          $packages = @(
+            Get-ChildItem -LiteralPath $workspace -File -Filter '*.msix' -Recurse -Force -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -notmatch '[\\/]\.git[\\/]' }
+          )
+          if ($packages.Count -eq 0) {
+            throw 'MSIX generation failed: MSBuild completed, but no .msix file was found anywhere under the GitHub workspace.'
+          }
+          $packages | Select-Object -ExpandProperty FullName | Write-Host
+
+          $stagingDirectory = Join-Path $workspace 'artifacts\Packages'
+          New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
+          foreach ($package in $packages) {
+            $destination = Join-Path $stagingDirectory $package.Name
+            if (-not [string]::Equals($package.FullName, $destination, [StringComparison]::OrdinalIgnoreCase)) {
+              Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
+            }
+          }
+
+          $stagedPackages = @(
+            Get-ChildItem -LiteralPath $stagingDirectory -File -Filter '*.msix' -ErrorAction SilentlyContinue
+          )
+          if ($stagedPackages.Count -eq 0) {
+            throw 'MSIX staging failed: a .msix was found, but no package is present in artifacts\Packages.'
+          }
+          Write-Host '--- staged packages for upload ---'
+          $stagedPackages | Select-Object -ExpandProperty FullName | Write-Host
+
       - name: Upload SecureKiosk MSIX
         uses: actions/upload-artifact@v4
         with:
           name: SecureKiosk-unsigned-msix
-          path: ${{ github.workspace }}/artifacts/Packages/**/*.msix
+          path: ${{ github.workspace }}/artifacts/Packages/*.msix
           if-no-files-found: error
           retention-days: 14
