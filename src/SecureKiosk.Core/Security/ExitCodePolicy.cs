@@ -1,10 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace SecureKiosk.Core.Security;
 
 public static class ExitCodePolicy
 {
     public const int Length = 4;
 
-    public static bool IsValid(string? code)
+    public static bool IsValid([NotNullWhen(true)] string? code)
     {
         if (code is null || code.Length != Length) return false;
         foreach (var character in code)
