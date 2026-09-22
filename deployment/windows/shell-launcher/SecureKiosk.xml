@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShellLauncherConfiguration xmlns="http://schemas.microsoft.com/ShellLauncher/2018/Configuration" xmlns:V2="http://schemas.microsoft.com/ShellLauncher/2019/Configuration">
+  <Profiles>
+    <DefaultProfile><Shell Shell="%SystemRoot%\explorer.exe" /></DefaultProfile>
+    <Profile Id="{6C1660BB-91DF-4A5A-8E4F-2F2AD2E5A8D7}">
+      <Shell Shell="__SECUREKIOSK_PATH__" V2:AppType="Desktop" V2:AllAppsFullScreen="true">
+        <ReturnCodeActions>
+          <ReturnCodeAction ReturnCode="1" Action="DoNothing" />
+          <ReturnCodeAction ReturnCode="0" Action="RestartShell" />
+          <ReturnCodeAction ReturnCode="-1" Action="RestartDevice" />
+        </ReturnCodeActions>
+        <DefaultAction Action="RestartShell" />
+      </Shell>
+    </Profile>
+  </Profiles>
+  <Configs><Config><Account Sid="__KIOSK_USER_SID__" /><Profile Id="{6C1660BB-91DF-4A5A-8E4F-2F2AD2E5A8D7}" /></Config></Configs>
+</ShellLauncherConfiguration>

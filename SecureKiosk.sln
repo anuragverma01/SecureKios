@@ -1,0 +1,38 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.Core", "src\SecureKiosk.Core\SecureKiosk.Core.csproj", "{A2D8B8E0-92EF-4E3D-8E55-0AF23F743D1C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.Infrastructure", "src\SecureKiosk.Infrastructure\SecureKiosk.Infrastructure.csproj", "{CA7BB970-3447-4F95-BB34-8B6D4A6A9A0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.App", "src\SecureKiosk.App\SecureKiosk.App.csproj", "{3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.Core.Tests", "tests\SecureKiosk.Core.Tests\SecureKiosk.Core.Tests.csproj", "{5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}"
+EndProject
+Global
+    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        Debug|Any CPU = Debug|Any CPU
+        Release|Any CPU = Release|Any CPU
+        Debug|x64 = Debug|x64
+        Release|x64 = Release|x64
+    EndGlobalSection
+    GlobalSection(ProjectConfigurationPlatforms) = postSolution
+        {A2D8B8E0-92EF-4E3D-8E55-0AF23F743D1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {A2D8B8E0-92EF-4E3D-8E55-0AF23F743D1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {A2D8B8E0-92EF-4E3D-8E55-0AF23F743D1C}.Debug|x64.ActiveCfg = Debug|Any CPU
+        {A2D8B8E0-92EF-4E3D-8E55-0AF23F743D1C}.Release|x64.ActiveCfg = Release|Any CPU
+        {CA7BB970-3447-4F95-BB34-8B6D4A6A9A0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {CA7BB970-3447-4F95-BB34-8B6D4A6A9A0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {CA7BB970-3447-4F95-BB34-8B6D4A6A9A0C}.Debug|x64.ActiveCfg = Debug|Any CPU
+        {CA7BB970-3447-4F95-BB34-8B6D4A6A9A0C}.Release|x64.ActiveCfg = Release|Any CPU
+        {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Debug|x64.ActiveCfg = Debug|x64
+        {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Release|x64.ActiveCfg = Release|x64
+        {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Debug|x64.ActiveCfg = Debug|Any CPU
+        {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Release|x64.ActiveCfg = Release|Any CPU
+    EndGlobalSection
+EndGlobal

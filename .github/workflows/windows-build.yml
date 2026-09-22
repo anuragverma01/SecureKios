@@ -1,0 +1,51 @@
+name: SecureKiosk Windows MSIX
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: SecureKiosk.sln
+      Configuration: Release
+      Platform: x64
+      AppxPackageDir: ${{ github.workspace }}\artifacts\Packages\
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore solution
+        shell: pwsh
+        run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+
+      - name: Build and package unsigned MSIX
+        shell: pwsh
+        run: >-
+          msbuild $env:Solution_Name
+          /p:Configuration=$env:Configuration
+          /p:Platform=$env:Platform
+          /p:AppxPackageDir="$env:AppxPackageDir"
+          /p:UapAppxPackageBuildMode=SideloadOnly
+          /p:AppxBundle=Never
+          /p:AppxPackageSigningEnabled=false
+          /p:GenerateAppxPackageOnBuild=true
+
+      - name: Upload SecureKiosk MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecureKiosk-unsigned-msix
+          path: ${{ github.workspace }}/artifacts/Packages/**/*.msix
+          if-no-files-found: error
+          retention-days: 14
