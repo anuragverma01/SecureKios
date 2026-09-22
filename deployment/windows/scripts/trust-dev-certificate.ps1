@@ -28,17 +28,29 @@ function Get-MsixManifestPublisher([string]$Path) {
   } finally { $archive.Dispose() }
 }
 
-function Test-CodeSigningEku([System.Security.Cryptography.X509Certificates.X509Certificate2]$Cert) {
-  if ($Cert.PSObject.Properties['EnhancedKeyUsageList']) {
-    return ($Cert.EnhancedKeyUsageList.ObjectId.Value -contains '1.3.6.1.5.5.7.3.3')
-  }
-  $ext = $Cert.Extensions['2.5.29.37']
-  if ($null -ne $ext) {
-    $eku = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]$ext
-    foreach ($usage in $eku.EnhancedKeyUsages) {
-      if ($usage.Value -eq '1.3.6.1.5.5.7.3.3') { return $true }
+function Test-CodeSigningEku($Cert) {
+  try {
+    if ($Cert.PSObject.Properties['EnhancedKeyUsageList'] -and $Cert.EnhancedKeyUsageList) {
+      return ($Cert.EnhancedKeyUsageList.ObjectId.Value -contains '1.3.6.1.5.5.7.3.3')
     }
-  }
+  } catch {}
+
+  try {
+    foreach ($ext in $Cert.Extensions) {
+      if ($ext.Oid -and $ext.Oid.Value -eq '2.5.29.37') {
+        $formatted = $ext.Format($false)
+        if ($formatted -match '1\.3\.6\.1\.5\.5\.7\.3\.3|Code Signing') {
+          return $true
+        }
+        try {
+          $typedEku = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($ext, $ext.Critical)
+          foreach ($u in $typedEku.EnhancedKeyUsages) {
+            if ($u.Value -eq '1.3.6.1.5.5.7.3.3') { return $true }
+          }
+        } catch {}
+      }
+    }
+  } catch {}
   return $false
 }
 
@@ -56,6 +68,8 @@ if (-not (Test-CodeSigningEku $certificate)) { throw 'Refusing to trust a certif
 
 Import-Certificate -FilePath $CertificatePath -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
 Import-Certificate -FilePath $CertificatePath -CertStoreLocation Cert:\LocalMachine\Root -ErrorAction SilentlyContinue | Out-Null
+Import-Certificate -FilePath $CertificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople -ErrorAction SilentlyContinue | Out-Null
+Import-Certificate -FilePath $CertificatePath -CertStoreLocation Cert:\CurrentUser\Root -ErrorAction SilentlyContinue | Out-Null
 
 $installed = Get-Item "Cert:\LocalMachine\TrustedPeople\$($certificate.Thumbprint)" -ErrorAction SilentlyContinue
 if ($null -eq $installed) {
