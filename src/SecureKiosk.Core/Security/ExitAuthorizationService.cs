@@ -23,7 +23,8 @@ public sealed class ExitAuthorizationService(
 
     public async Task<ExitAuthorizationResult> AuthorizeAsync(string code, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(code)) return await InvalidAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!ExitCodePolicy.IsValid(code)) return await InvalidAsync(cancellationToken).ConfigureAwait(false);
 
         lock (_gate)
         {

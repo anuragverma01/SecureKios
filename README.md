@@ -24,3 +24,5 @@ dotnet test SecureKiosk.sln --configuration Release
 ```
 
 See `docs/deployment/windows-kiosk.md` before applying kiosk configuration. Do not run provisioning scripts on a production machine until the recovery procedure has been tested.
+
+For development MSIX signing and administrator exit-credential provisioning, see `docs/deployment/development-signing.md`.

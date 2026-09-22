@@ -1,11 +1,15 @@
 param(
   [Parameter(Mandatory)][string]$KioskUser,
   [Parameter(Mandatory)][string]$ApplicationPath,
+  [string]$CredentialToolPath = "$env:ProgramFiles\SecureKiosk\SecureKiosk.CredentialTool.exe",
   [string]$ConfigurationPath = "$PSScriptRoot\..\shell-launcher\SecureKiosk.xml"
 )
 . "$PSScriptRoot\common.ps1"
 Assert-Administrator; Assert-SupportedEdition | Out-Null
 if (-not (Test-Path $ApplicationPath)) { throw "Application not found: $ApplicationPath" }
+if (-not (Test-Path $CredentialToolPath)) { throw "Credential utility was not found: $CredentialToolPath. Refusing to enable kiosk mode without validating an administrator credential." }
+& $CredentialToolPath status
+if ($LASTEXITCODE -ne 0) { throw 'Refusing to enable kiosk mode because no valid administrator credential is provisioned.' }
 $sid = Get-UserSid $KioskUser
 $xml = Get-Content -Raw -Path $ConfigurationPath
 $shellPath = [System.Security.SecurityElement]::Escape(('"' + $ApplicationPath + '"'))

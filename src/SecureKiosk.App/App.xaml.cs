@@ -18,8 +18,18 @@ public partial class App : Application
     {
         InitializeComponent();
         var services = new ServiceCollection();
-        var dataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SecureKiosk");
-        services.AddSingleton<ISecureCredentialStore>(_ => new DpapiCredentialStore(Path.Combine(dataRoot, "credential.bin")));
+#if DEBUG
+        var developmentCode = Environment.GetEnvironmentVariable(DevelopmentExitCredential.EnvironmentVariableName);
+        if (DevelopmentExitCredential.TryGetConfiguredCode(true, developmentCode, out var configuredDevelopmentCode))
+        {
+            services.AddSingleton<ISecureCredentialStore>(_ => new DevelopmentCredentialStore(configuredDevelopmentCode));
+        }
+        else
+#endif
+        {
+            services.AddSingleton<ISecureCredentialStore>(_ => new DpapiCredentialStore(CredentialPaths.GetDefaultPath()));
+        }
+        var dataRoot = Path.GetDirectoryName(CredentialPaths.GetDefaultPath())!;
         services.AddSingleton<IAuditService>(_ => new JsonLineAuditService(Path.Combine(dataRoot, "audit.jsonl")));
         services.AddSingleton<IExitAuthorizationService, ExitAuthorizationService>();
         services.AddSingleton<IWindowsKioskService, WindowsKioskService>();

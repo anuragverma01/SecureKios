@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.Infrastructure"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.App", "src\SecureKiosk.App\SecureKiosk.App.csproj", "{3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.CredentialTool", "src\SecureKiosk.CredentialTool\SecureKiosk.CredentialTool.csproj", "{815AB2B2-E0D2-4B0C-A9A8-25C3CBF4FDCC}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureKiosk.Core.Tests", "tests\SecureKiosk.Core.Tests\SecureKiosk.Core.Tests.csproj", "{5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}"
 EndProject
 Global
@@ -30,6 +32,10 @@ Global
         {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Debug|x64.ActiveCfg = Debug|x64
         {3D2BB76A-5BB0-4BAE-A2B1-2C857B3178CF}.Release|x64.ActiveCfg = Release|x64
+        {815AB2B2-E0D2-4B0C-A9A8-25C3CBF4FDCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {815AB2B2-E0D2-4B0C-A9A8-25C3CBF4FDCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {815AB2B2-E0D2-4B0C-A9A8-25C3CBF4FDCC}.Debug|x64.ActiveCfg = Debug|x64
+        {815AB2B2-E0D2-4B0C-A9A8-25C3CBF4FDCC}.Release|x64.ActiveCfg = Release|x64
         {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
         {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {5DA2C405-BC23-4CCF-A466-7DA3E8A5E8F8}.Debug|x64.ActiveCfg = Debug|Any CPU
