@@ -7,11 +7,7 @@
     PrimaryButtonClick="OnVerify">
     <StackPanel Spacing="12">
         <TextBlock Text="Enter the 4-digit administrator exit code."/>
-        <PasswordBox x:Name="CodeBox" PasswordRevealMode="Hidden" MaxLength="4" PasswordChanged="OnCodeChanged">
-            <PasswordBox.InputScope>
-                <InputScope><InputScopeName NameValue="Number" /></InputScope>
-            </PasswordBox.InputScope>
-        </PasswordBox>
+        <PasswordBox x:Name="CodeBox" PasswordRevealMode="Hidden" MaxLength="4" InputScope="NumericPin" PasswordChanged="OnCodeChanged"/>
         <TextBlock x:Name="ErrorText" Foreground="#E57373" Visibility="Collapsed" TextWrapping="Wrap"/>
     </StackPanel>
 </ContentDialog>
