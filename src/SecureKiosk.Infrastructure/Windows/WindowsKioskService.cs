@@ -213,7 +213,7 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
         var aliasPath = Path.Combine(localAppData, @"Microsoft\WindowsApps\SecureKiosk.exe");
         if (File.Exists(aliasPath)) return aliasPath;
 
-        return "SecureKiosk.exe";
+        return "SecureKiosk.App.exe";
     }
 
     private static KioskOperationResult ConfigureShellLauncher(string user, string sid, string appPath)
