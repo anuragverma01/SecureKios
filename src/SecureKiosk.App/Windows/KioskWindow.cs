@@ -1,5 +1,5 @@
+using Microsoft.UI;
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Win32Interop;
 using Microsoft.UI.Xaml;
 using SecureKiosk.App.Pages;
 using WinRT.Interop;
