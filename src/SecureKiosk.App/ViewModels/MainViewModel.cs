@@ -16,7 +16,14 @@ public sealed class MainViewModel
 
 public sealed class DelegateCommand(Func<Task> execute) : ICommand
 {
-    public event EventHandler? CanExecuteChanged;
+    // This command is permanently enabled, so WinUI never needs a CanExecute refresh.
+    // ICommand still requires the event; explicit no-op accessors avoid an unused backing field.
+    event EventHandler? ICommand.CanExecuteChanged
+    {
+        add { }
+        remove { }
+    }
+
     public bool CanExecute(object? parameter) => true;
     public async void Execute(object? parameter) => await execute();
 }
