@@ -10,9 +10,10 @@ jobs:
 
     env:
       Solution_Name: SecureKiosk.sln
+      App_Project: src\SecureKiosk.App\SecureKiosk.App.csproj
+      PublishProfile: Properties\PublishProfiles\win10-x64.pubxml
       Configuration: Release
       Platform: x64
-      AppxPackageDir: ${{ github.workspace }}\artifacts\Packages\
 
     steps:
       - name: Checkout
@@ -33,28 +34,54 @@ jobs:
       - name: Build and package unsigned MSIX
         shell: pwsh
         run: >-
-          msbuild $env:Solution_Name
+          msbuild $env:App_Project
+          /t:Build
           /p:Configuration=$env:Configuration
           /p:Platform=$env:Platform
-          /p:AppxPackageDir="$env:AppxPackageDir"
+          /p:PublishProfile=$env:PublishProfile
+          /p:EnableMsixTooling=true
+          /p:AppxPackageDir="$env:GITHUB_WORKSPACE\artifacts"
           /p:UapAppxPackageBuildMode=SideloadOnly
           /p:AppxBundle=Never
           /p:AppxPackageSigningEnabled=false
           /p:GenerateAppxPackageOnBuild=true
 
-      - name: Diagnose and stage generated MSIX
+      - name: Diagnose MSIX generation and stage artifact
         shell: pwsh
         run: |
           $workspace = $env:GITHUB_WORKSPACE
+          $projectRoot = Join-Path $workspace 'src\SecureKiosk.App'
+          $projectFile = Join-Path $projectRoot 'SecureKiosk.App.csproj'
+          $artifactRoot = Join-Path $workspace 'artifacts'
+
+          Write-Host '--- selected build properties ---'
+          Write-Host "MSBuild:"
+          msbuild -version
+          Write-Host "Configuration=$env:Configuration"
+          Write-Host "Platform=$env:Platform"
+          Write-Host "PublishProfile=$env:PublishProfile"
+          Write-Host "AppxPackageDir=$artifactRoot"
+
+          [xml]$project = Get-Content -LiteralPath $projectFile
+          $propertyGroup = $project.Project.PropertyGroup | Select-Object -First 1
+          Write-Host "EnableMsixTooling=$($propertyGroup.EnableMsixTooling)"
+          Write-Host "ProjectPublishProfile=$($propertyGroup.PublishProfile)"
+          if ($propertyGroup.EnableMsixTooling -ne 'true') {
+            throw 'MSIX generation failed: EnableMsixTooling is not active in SecureKiosk.App.csproj.'
+          }
+
+          Write-Host '--- all generated files under SecureKiosk.App ---'
+          Get-ChildItem -LiteralPath $projectRoot -File -Recurse -Force -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty FullName | Write-Host
+
+          Write-Host '--- artifacts, bin, and Packages directories ---'
           $directoryNames = @('artifacts', 'bin', 'Packages')
           $directories = @(
             Get-ChildItem -LiteralPath $workspace -Directory -Recurse -Force -ErrorAction SilentlyContinue |
               Where-Object { $directoryNames -contains $_.Name }
           )
-
-          Write-Host '--- artifacts, bin, and Packages directories ---'
           if ($directories.Count -eq 0) {
-            Write-Host 'No matching output directories were found.'
+            Write-Host 'No artifacts, bin, or Packages directories were found.'
           }
           foreach ($directory in $directories) {
             Write-Host "[$($directory.FullName)]"
@@ -73,20 +100,19 @@ jobs:
           }
           $packages | Select-Object -ExpandProperty FullName | Write-Host
 
-          $stagingDirectory = Join-Path $workspace 'artifacts\Packages'
-          New-Item -ItemType Directory -Path $stagingDirectory -Force | Out-Null
+          New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
           foreach ($package in $packages) {
-            $destination = Join-Path $stagingDirectory $package.Name
+            $destination = Join-Path $artifactRoot $package.Name
             if (-not [string]::Equals($package.FullName, $destination, [StringComparison]::OrdinalIgnoreCase)) {
               Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
             }
           }
 
           $stagedPackages = @(
-            Get-ChildItem -LiteralPath $stagingDirectory -File -Filter '*.msix' -ErrorAction SilentlyContinue
+            Get-ChildItem -LiteralPath $artifactRoot -File -Filter '*.msix' -ErrorAction SilentlyContinue
           )
           if ($stagedPackages.Count -eq 0) {
-            throw 'MSIX staging failed: a .msix was found, but no package is present in artifacts\Packages.'
+            throw 'MSIX staging failed: a .msix was found, but no package is present in artifacts.'
           }
           Write-Host '--- staged packages for upload ---'
           $stagedPackages | Select-Object -ExpandProperty FullName | Write-Host
@@ -95,6 +121,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SecureKiosk-unsigned-msix
-          path: ${{ github.workspace }}/artifacts/Packages/*.msix
+          path: ${{ github.workspace }}/artifacts/*.msix
           if-no-files-found: error
           retention-days: 14
