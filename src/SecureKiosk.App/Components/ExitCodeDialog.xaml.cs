@@ -26,7 +26,11 @@ public sealed partial class ExitCodeDialog : ContentDialog
         {
             await App.Services.GetRequiredService<IWindowsKioskService>().RequestCleanExitAsync(ExitCodes.AuthorizedExit);
             args.Cancel = false;
+            // Application.Current.Exit() requests XAML shutdown but is not guaranteed
+            // to terminate the native process in WinUI 3. Environment.Exit ensures the
+            // process is removed from the OS and is visible to Task Manager / Get-Process.
             Application.Current.Exit();
+            Environment.Exit(ExitCodes.AuthorizedExit);
             return;
         }
         args.Cancel = true;
@@ -35,6 +39,10 @@ public sealed partial class ExitCodeDialog : ContentDialog
             : "The exit code is invalid.";
         ErrorText.Visibility = Visibility.Visible;
         CodeBox.Password = string.Empty;
+#if DEBUG
+        // Development diagnostic only — never logs the entered code or credential material.
+        System.Diagnostics.Debug.WriteLine($"[SecureKiosk] Administrator Exit: auth result = {result.Status}");
+#endif
     }
 
     private void OnCodeChanged(object sender, RoutedEventArgs args)

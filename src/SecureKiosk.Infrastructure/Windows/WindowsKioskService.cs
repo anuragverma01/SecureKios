@@ -33,15 +33,21 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
 
         if (OperatingSystem.IsWindows() && exitCode == ExitCodes.AuthorizedExit)
         {
-            // If running as the custom kiosk shell, initiate a graceful session logoff
-            // so the workstation returns to the Windows sign-in screen for administrator login.
-            try
+            // Only initiate a Windows session logoff when Shell Launcher is actually active.
+            // In development / non-kiosk mode, ExitWindowsEx must NOT be called — it would
+            // sign out the entire Windows user session. Process termination is handled by
+            // Environment.Exit in the caller (ExitCodeDialog).
+            var shellStatus = QueryShellLauncherStatus();
+            if (shellStatus.IsConfigured)
             {
-                ExitWindowsEx(EWX_LOGOFF | EWX_FORCEIFHUNG, SHTDN_REASON_FLAG_PLANNED);
-            }
-            catch
-            {
-                // Fallback: Shell Launcher or process termination will handle exit.
+                try
+                {
+                    ExitWindowsEx(EWX_LOGOFF | EWX_FORCEIFHUNG, SHTDN_REASON_FLAG_PLANNED);
+                }
+                catch
+                {
+                    // Fallback: Shell Launcher exit code handling will terminate the session.
+                }
             }
         }
     }

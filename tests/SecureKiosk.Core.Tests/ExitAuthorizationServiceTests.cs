@@ -7,6 +7,8 @@ namespace SecureKiosk.Core.Tests;
 
 public sealed class ExitAuthorizationServiceTests
 {
+    // ── existing tests ──────────────────────────────────────────────────────
+
     [Fact]
     public void Kiosk_configuration_rejects_missing_application_path()
     {
@@ -75,6 +77,96 @@ public sealed class ExitAuthorizationServiceTests
         var service = new ExitAuthorizationService(new MissingStore(), new MemoryAudit());
         await Assert.ThrowsAsync<OperationCanceledException>(() => service.AuthorizeAsync("5013", cancellation.Token));
     }
+
+    // ── new tests ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Three_digit_code_is_rejected()
+    {
+        var service = new ExitAuthorizationService(new MemoryStore(CredentialRecordFor("5013")), new MemoryAudit());
+        var result = await service.AuthorizeAsync("501");
+        Assert.Equal(ExitAuthorizationStatus.Invalid, result.Status);
+    }
+
+    [Fact]
+    public async Task Five_digit_code_is_rejected()
+    {
+        var service = new ExitAuthorizationService(new MemoryStore(CredentialRecordFor("5013")), new MemoryAudit());
+        var result = await service.AuthorizeAsync("50134");
+        Assert.Equal(ExitAuthorizationStatus.Invalid, result.Status);
+    }
+
+    [Fact]
+    public async Task Non_numeric_code_is_rejected()
+    {
+        var service = new ExitAuthorizationService(new MemoryStore(CredentialRecordFor("5013")), new MemoryAudit());
+        var result = await service.AuthorizeAsync("50a3");
+        Assert.Equal(ExitAuthorizationStatus.Invalid, result.Status);
+    }
+
+    [Fact]
+    public async Task Cancel_returns_invalid_without_modifying_lockout_state()
+    {
+        // Simulates the user dismissing the dialog (enters no code / empty string).
+        var service = new ExitAuthorizationService(new MemoryStore(CredentialRecordFor("5013")), new MemoryAudit(), maxAttempts: 5);
+        var result = await service.AuthorizeAsync(string.Empty);
+        // Must be Invalid, not Authorized or RateLimited.
+        Assert.Equal(ExitAuthorizationStatus.Invalid, result.Status);
+    }
+
+    [Fact]
+    public void DevelopmentExitCredential_fallback_returns_dev_code_when_no_env_var_set()
+    {
+        // Simulate the case where the env var is absent (null).
+        // In a DEBUG build, TryGetConfiguredCode must still succeed via the fallback.
+        var succeeded = DevelopmentExitCredential.TryGetConfiguredCode(
+            isDevelopmentBuild: true,
+            configuredCode: null,
+            out var code);
+
+#if DEBUG
+        // In a DEBUG build, the fallback code must be returned.
+        Assert.True(succeeded);
+        Assert.NotNull(code);
+        Assert.True(ExitCodePolicy.IsValid(code), "Fallback code must satisfy the 4-digit policy.");
+#else
+        // In a Release build, the fallback is not compiled in; no env var means no code.
+        Assert.False(succeeded);
+        Assert.Null(code);
+#endif
+    }
+
+    [Fact]
+    public void DevelopmentExitCredential_env_var_override_is_accepted()
+    {
+        // When an explicit env-var value is provided and valid, it should be used.
+        var succeeded = DevelopmentExitCredential.TryGetConfiguredCode(
+            isDevelopmentBuild: true,
+            configuredCode: "1234",
+            out var code);
+
+        Assert.True(succeeded);
+        Assert.Equal("1234", code);
+    }
+
+    [Fact]
+    public async Task Rate_limited_status_prevents_correct_code_during_lockout()
+    {
+        var service = new ExitAuthorizationService(
+            new MemoryStore(CredentialRecordFor("5013")),
+            new MemoryAudit(),
+            maxAttempts: 1);
+
+        // One wrong attempt triggers immediate lockout (maxAttempts = 1).
+        var firstResult = await service.AuthorizeAsync("0000");
+        Assert.Equal(ExitAuthorizationStatus.RateLimited, firstResult.Status);
+
+        // Correct code must be blocked while locked out.
+        var secondResult = await service.AuthorizeAsync("5013");
+        Assert.Equal(ExitAuthorizationStatus.RateLimited, secondResult.Status);
+    }
+
+    // ── helpers ─────────────────────────────────────────────────────────────
 
     private static CredentialRecord CredentialRecordFor(string code)
     {
