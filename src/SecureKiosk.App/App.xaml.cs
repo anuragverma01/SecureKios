@@ -62,5 +62,22 @@ public partial class App : Application
     {
         _window = new KioskWindow();
         _window.Activate();
+        _ = EnsureStartupTaskEnabledAsync();
+    }
+
+    private static async Task EnsureStartupTaskEnabledAsync()
+    {
+        try
+        {
+            var task = await Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
+            if (task.State == Windows.ApplicationModel.StartupTaskState.Disabled)
+            {
+                await task.RequestEnableAsync();
+            }
+        }
+        catch
+        {
+            // Ignore in unpackaged test environments or unsupported hosts
+        }
     }
 }
