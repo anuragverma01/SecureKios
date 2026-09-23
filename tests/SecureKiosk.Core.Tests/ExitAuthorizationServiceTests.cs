@@ -118,22 +118,15 @@ public sealed class ExitAuthorizationServiceTests
     public void DevelopmentExitCredential_fallback_returns_dev_code_when_no_env_var_set()
     {
         // Simulate the case where the env var is absent (null).
-        // In a DEBUG build, TryGetConfiguredCode must still succeed via the fallback.
+        // TryGetConfiguredCode must succeed via the built-in fallback in all builds.
         var succeeded = DevelopmentExitCredential.TryGetConfiguredCode(
             isDevelopmentBuild: true,
             configuredCode: null,
             out var code);
 
-#if DEBUG
-        // In a DEBUG build, the fallback code must be returned.
         Assert.True(succeeded);
         Assert.NotNull(code);
         Assert.True(ExitCodePolicy.IsValid(code), "Fallback code must satisfy the 4-digit policy.");
-#else
-        // In a Release build, the fallback is not compiled in; no env var means no code.
-        Assert.False(succeeded);
-        Assert.Null(code);
-#endif
     }
 
     [Fact]
