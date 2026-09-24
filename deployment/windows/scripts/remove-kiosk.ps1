@@ -18,14 +18,18 @@ try {
   Write-Verbose "Shell Launcher reset skipped: $($_.Exception.Message)"
 }
 
-# 2. Reset Registry per-user shell
+# 2. Reset Registry per-user shell and Task Manager
 if ($KioskUser) {
   $sid = Get-UserSid $KioskUser
   Remove-RegistryKioskShell -UserSid $sid
+  $policyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+  if (Test-Path $policyKey) { Remove-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue }
 } else {
   # Clean across all user hives
   Get-ChildItem 'Registry::HKEY_USERS' | Where-Object { $_.PSChildName -like 'S-1-5-21-*' } | ForEach-Object {
     Remove-RegistryKioskShell -UserSid $_.PSChildName
+    $policyKey = "Registry::HKEY_USERS\$($_.PSChildName)\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+    if (Test-Path $policyKey) { Remove-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue }
   }
 }
 

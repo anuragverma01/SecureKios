@@ -186,6 +186,10 @@ jobs:
 
           Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Install.bat" -Destination (Join-Path $artifactDir 'Install.bat') -Force
           Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Install.ps1" -Destination (Join-Path $artifactDir 'Install.ps1') -Force
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Enable-KioskMode.bat" -Destination (Join-Path $artifactDir 'Enable-KioskMode.bat') -Force
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Enable-KioskMode.ps1" -Destination (Join-Path $artifactDir 'Enable-KioskMode.ps1') -Force
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Disable-KioskMode.bat" -Destination (Join-Path $artifactDir 'Disable-KioskMode.bat') -Force
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Disable-KioskMode.ps1" -Destination (Join-Path $artifactDir 'Disable-KioskMode.ps1') -Force
 
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
           Write-Host "=== DEVELOPMENT SIGNING VERIFICATION ==="
@@ -209,5 +213,9 @@ jobs:
             ${{ github.workspace }}/artifacts/SecureKiosk-Dev.cer
             ${{ github.workspace }}/artifacts/Install.bat
             ${{ github.workspace }}/artifacts/Install.ps1
+            ${{ github.workspace }}/artifacts/Enable-KioskMode.bat
+            ${{ github.workspace }}/artifacts/Enable-KioskMode.ps1
+            ${{ github.workspace }}/artifacts/Disable-KioskMode.bat
+            ${{ github.workspace }}/artifacts/Disable-KioskMode.ps1
           if-no-files-found: error
           retention-days: 14
