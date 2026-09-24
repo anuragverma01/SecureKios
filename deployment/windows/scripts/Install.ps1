@@ -37,8 +37,17 @@ if (-not (Test-Path $serializeKey)) { New-Item -Path $serializeKey -Force | Out-
 Set-ItemProperty -Path $serializeKey -Name 'StartupDelayInMSec' -Value 0 -Type DWord -Force
 Set-ItemProperty -Path $serializeKey -Name 'WaitForIdleState' -Value 0 -Type DWord -Force
 
-# 4. Launch SecureKiosk immediately
-Write-Host "Launching SecureKiosk..."
+# 4. Fast launch via Run key to execute immediately upon logon
+$runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $appId = "$($pkg.PackageFamilyName)!App"
+Set-ItemProperty -Path $runKey -Name 'SecureKioskFastLaunch' -Value "explorer.exe shell:AppsFolder\$appId" -Force
+
+# 5. Disable Task Manager while kiosk mode is active
+$policyKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'
+if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
+Set-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+
+# 6. Launch SecureKiosk immediately
+Write-Host "Launching SecureKiosk..."
 Start-Process "explorer.exe" "shell:AppsFolder\$appId"
 Write-Host "SecureKiosk launched successfully."

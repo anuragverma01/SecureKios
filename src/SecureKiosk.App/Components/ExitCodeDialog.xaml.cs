@@ -36,6 +36,12 @@ public sealed partial class ExitCodeDialog : ContentDialog
                     using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
                     key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
                     key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
+
+                    using var runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+                    runKey?.DeleteValue("SecureKioskFastLaunch", throwOnMissingValue: false);
+
+                    using var policyKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System", writable: true);
+                    policyKey?.DeleteValue("DisableTaskMgr", throwOnMissingValue: false);
                 }
             }
             catch

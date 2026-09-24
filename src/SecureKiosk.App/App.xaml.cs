@@ -82,6 +82,22 @@ public partial class App : Application
                 using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize");
                 key?.SetValue("StartupDelayInMSec", 0, Microsoft.Win32.RegistryValueKind.DWord);
                 key?.SetValue("WaitForIdleState", 0, Microsoft.Win32.RegistryValueKind.DWord);
+
+                // Fast launch via Run key to execute immediately upon logon without Modern App Lifecycle queue delay
+                try
+                {
+                    var pkgFamily = global::Windows.ApplicationModel.Package.Current?.Id?.FamilyName;
+                    if (!string.IsNullOrEmpty(pkgFamily))
+                    {
+                        using var runKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
+                        runKey?.SetValue("SecureKioskFastLaunch", $"explorer.exe shell:AppsFolder\\{pkgFamily}!App");
+                    }
+                }
+                catch { }
+
+                // Block Task Manager while kiosk mode is active so users cannot terminate the app
+                using var policyKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System");
+                policyKey?.SetValue("DisableTaskMgr", 1, Microsoft.Win32.RegistryValueKind.DWord);
             }
         }
         catch
