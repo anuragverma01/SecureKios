@@ -24,6 +24,18 @@ public sealed partial class ExitCodeDialog : ContentDialog
         var result = await service.AuthorizeAsync(CodeBox.Password);
         if (result.Status == ExitAuthorizationStatus.Authorized)
         {
+            // Disarm startup task so the app does NOT reopen on restart/power off
+            // after an authorized administrator exit.
+            try
+            {
+                var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
+                task.Disable();
+            }
+            catch
+            {
+                // Fallback for unpackaged or unsupported environments
+            }
+
             await App.Services.GetRequiredService<IWindowsKioskService>().RequestCleanExitAsync(ExitCodes.AuthorizedExit);
             args.Cancel = false;
             // Application.Current.Exit() requests XAML shutdown but is not guaranteed

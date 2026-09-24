@@ -2,7 +2,8 @@
 param(
   [Parameter()][string]$MsixPath,
   [string]$CertificatePath,
-  [string]$KioskUser = $env:USERNAME
+  [string]$KioskUser = $env:USERNAME,
+  [switch]$ConfigureKioskShell
 )
 
 . "$PSScriptRoot\common.ps1"
@@ -40,7 +41,13 @@ Add-AppxPackage -Path $MsixPath -ForceUpdateFromAnyVersion
 $pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction Stop
 Write-Host "SecureKiosk successfully installed: $($pkg.PackageFullName)"
 
-# 4. Configure kiosk mode if requested
-if ($KioskUser) {
+# 4. Launch SecureKiosk immediately
+Write-Host "Launching SecureKiosk..."
+$appId = "$($pkg.PackageFamilyName)!App"
+Start-Process "explorer.exe" "shell:AppsFolder\$appId"
+Write-Host "SecureKiosk launched successfully."
+
+# 5. Configure kiosk shell if explicitly requested
+if ($ConfigureKioskShell) {
   & "$PSScriptRoot\setup-kiosk.ps1" -KioskUser $KioskUser
 }

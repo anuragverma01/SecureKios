@@ -184,6 +184,9 @@ jobs:
             throw "Expected CER missing: $cerPath"
           }
 
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Install.bat" -Destination (Join-Path $artifactDir 'Install.bat') -Force
+          Copy-Item -LiteralPath "$env:GITHUB_WORKSPACE\deployment\windows\scripts\Install.ps1" -Destination (Join-Path $artifactDir 'Install.ps1') -Force
+
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
           Write-Host "=== DEVELOPMENT SIGNING VERIFICATION ==="
           Write-Host "Manifest Publisher: CN=SecureKiosk"
@@ -204,5 +207,7 @@ jobs:
           path: |
             ${{ github.workspace }}/artifacts/SecureKiosk.App_1.0.0.0_x64.msix
             ${{ github.workspace }}/artifacts/SecureKiosk-Dev.cer
+            ${{ github.workspace }}/artifacts/Install.bat
+            ${{ github.workspace }}/artifacts/Install.ps1
           if-no-files-found: error
           retention-days: 14

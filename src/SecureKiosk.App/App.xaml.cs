@@ -70,7 +70,8 @@ public partial class App : Application
         try
         {
             var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
-            if (task.State == global::Windows.ApplicationModel.StartupTaskState.Disabled)
+            if (task.State != global::Windows.ApplicationModel.StartupTaskState.Enabled &&
+                task.State != global::Windows.ApplicationModel.StartupTaskState.DisabledByPolicy)
             {
                 await task.RequestEnableAsync();
             }

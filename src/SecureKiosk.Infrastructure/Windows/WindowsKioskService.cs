@@ -33,6 +33,18 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
 
         if (OperatingSystem.IsWindows() && exitCode == ExitCodes.AuthorizedExit)
         {
+            // Disarm startup task so the app does NOT reopen on restart/power off
+            // after an authorized administrator exit.
+            try
+            {
+                var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
+                task.Disable();
+            }
+            catch
+            {
+                // Fallback for unpackaged or unsupported environments
+            }
+
             // Only initiate a Windows session logoff when Shell Launcher is actually active.
             // In development / non-kiosk mode, ExitWindowsEx must NOT be called — it would
             // sign out the entire Windows user session. Process termination is handled by

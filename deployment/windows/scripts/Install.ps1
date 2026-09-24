@@ -1,0 +1,38 @@
+# SecureKiosk Single-Click Installer & Launcher
+# Elevate if not already administrator
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = New-Object Security.Principal.WindowsPrincipal($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "Elevating permissions to install certificate and package..."
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# 1. Trust Certificate
+$certFile = Get-ChildItem -Path $scriptDir -Filter "*.cer" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($certFile) {
+    Write-Host "Trusting certificate: $($certFile.Name)..."
+    Import-Certificate -FilePath $certFile.FullName -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' -ErrorAction SilentlyContinue | Out-Null
+    Import-Certificate -FilePath $certFile.FullName -CertStoreLocation 'Cert:\LocalMachine\Root' -ErrorAction SilentlyContinue | Out-Null
+}
+
+# 2. Install MSIX Package
+$msixFile = Get-ChildItem -Path $scriptDir -Filter "*.msix" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $msixFile) {
+    Write-Error "No .msix package found in $scriptDir"
+    exit 1
+}
+
+Write-Host "Installing package: $($msixFile.Name)..."
+Add-AppxPackage -Path $msixFile.FullName -ForceUpdateFromAnyVersion
+
+$pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction Stop
+Write-Host "SecureKiosk installed successfully: $($pkg.PackageFullName)"
+
+# 3. Launch SecureKiosk immediately
+Write-Host "Launching SecureKiosk..."
+$appId = "$($pkg.PackageFamilyName)!App"
+Start-Process "explorer.exe" "shell:AppsFolder\$appId"
+Write-Host "SecureKiosk launched successfully."
