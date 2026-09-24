@@ -75,6 +75,14 @@ public partial class App : Application
             {
                 await task.RequestEnableAsync();
             }
+
+            // Zero out Windows 10/11 Explorer startup delays so startup tasks launch immediately upon sign-in
+            if (OperatingSystem.IsWindows())
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize");
+                key?.SetValue("StartupDelayInMSec", 0, Microsoft.Win32.RegistryValueKind.DWord);
+                key?.SetValue("WaitForIdleState", 0, Microsoft.Win32.RegistryValueKind.DWord);
+            }
         }
         catch
         {

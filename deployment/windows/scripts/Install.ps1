@@ -31,7 +31,13 @@ Add-AppxPackage -Path $msixFile.FullName -ForceUpdateFromAnyVersion
 $pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction Stop
 Write-Host "SecureKiosk installed successfully: $($pkg.PackageFullName)"
 
-# 3. Launch SecureKiosk immediately
+# 3. Optimize Windows Startup Delay to 0 ms so SecureKiosk opens instantly on reboot
+$serializeKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize'
+if (-not (Test-Path $serializeKey)) { New-Item -Path $serializeKey -Force | Out-Null }
+Set-ItemProperty -Path $serializeKey -Name 'StartupDelayInMSec' -Value 0 -Type DWord -Force
+Set-ItemProperty -Path $serializeKey -Name 'WaitForIdleState' -Value 0 -Type DWord -Force
+
+# 4. Launch SecureKiosk immediately
 Write-Host "Launching SecureKiosk..."
 $appId = "$($pkg.PackageFamilyName)!App"
 Start-Process "explorer.exe" "shell:AppsFolder\$appId"

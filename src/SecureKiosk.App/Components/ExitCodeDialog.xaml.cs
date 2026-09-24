@@ -30,6 +30,13 @@ public sealed partial class ExitCodeDialog : ContentDialog
             {
                 var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
                 task.Disable();
+
+                if (OperatingSystem.IsWindows())
+                {
+                    using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
+                    key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
+                    key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
+                }
             }
             catch
             {

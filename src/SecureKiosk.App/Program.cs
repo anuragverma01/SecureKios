@@ -39,6 +39,15 @@ public static partial class Program
 
         // Initialize WinUI 3 XAML Application
         WinRT.ComWrappersSupport.InitializeComWrappers();
+
+        var mainInstance = Microsoft.Windows.AppLifecycle.AppInstance.FindOrRegisterForKey("SecureKioskSingleInstance");
+        if (!mainInstance.IsCurrent)
+        {
+            var activatedArgs = Microsoft.Windows.AppLifecycle.AppInstance.GetCurrent().GetActivatedEventArgs();
+            await mainInstance.RedirectActivationToAsync(activatedArgs);
+            return 0;
+        }
+
         Microsoft.UI.Xaml.Application.Start((p) =>
         {
             var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
