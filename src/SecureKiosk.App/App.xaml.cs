@@ -95,6 +95,19 @@ public partial class App : Application
                 }
                 catch { }
 
+                try
+                {
+                    var enableInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "schtasks.exe",
+                        Arguments = "/change /tn \"SecureKioskInstantLaunch\" /enable",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    using var proc = System.Diagnostics.Process.Start(enableInfo);
+                }
+                catch { }
+
                 // Block Task Manager while kiosk mode is active so users cannot terminate the app
                 using var policyKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System");
                 policyKey?.SetValue("DisableTaskMgr", 1, Microsoft.Win32.RegistryValueKind.DWord);

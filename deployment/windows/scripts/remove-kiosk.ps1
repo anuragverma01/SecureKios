@@ -33,6 +33,12 @@ if ($KioskUser) {
   }
 }
 
+# 3. Clean HKLM, scheduled tasks, and Run key
+$hklmPolicy = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+if (Test-Path $hklmPolicy) { Remove-ItemProperty -Path $hklmPolicy -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue }
+schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null
+schtasks.exe /delete /tn "SecureKioskDisarm" /f 2>$null | Out-Null
+
 Write-Host "============================================================"
 Write-Host "SUCCESS: Kiosk mode removed. Default Windows desktop (explorer.exe) restored."
 Write-Host "Restart or sign out to return to normal desktop mode."

@@ -18,10 +18,29 @@ if (Test-Path $winlogonKey) {
     Remove-ItemProperty -Path $winlogonKey -Name 'Shell' -ErrorAction SilentlyContinue
 }
 
-# 2. Re-enable Task Manager in Host Registry
+# 2. Re-enable Task Manager in Host Registry (both User and Machine hives)
 $policyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
 if (Test-Path $policyKey) {
     Remove-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+}
+$hkcuPolicyKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+if (Test-Path $hkcuPolicyKey) {
+    Remove-ItemProperty -Path $hkcuPolicyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+}
+$hklmPolicyKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+if (Test-Path $hklmPolicyKey) {
+    Remove-ItemProperty -Path $hklmPolicyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+}
+
+# 3. Clean up Scheduled Tasks and Fast Launch Run key
+schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null
+schtasks.exe /delete /tn "SecureKioskDisarm" /f 2>$null | Out-Null
+Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'SecureKioskFastLaunch' -ErrorAction SilentlyContinue
+
+# 4. Ensure Explorer desktop process is running
+$exp = Get-Process -Name 'explorer' -ErrorAction SilentlyContinue
+if (-not $exp) {
+    Start-Process 'explorer.exe'
 }
 
 Write-Host ""

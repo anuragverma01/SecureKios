@@ -57,11 +57,15 @@ if ($edition -in $supportedEnterprise) {
   Set-RegistryKioskShell -UserSid $sid -ApplicationPath $ApplicationPath
 }
 
-# Disable Task Manager for the kiosk user in host registry
+# Disable Task Manager for the kiosk user and system in host registry
 $policyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
 if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
 Set-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
-Write-Host "Task Manager disabled for '$KioskUser'."
+
+$hklmPolicy = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+if (-not (Test-Path $hklmPolicy)) { New-Item -Path $hklmPolicy -Force | Out-Null }
+Set-ItemProperty -Path $hklmPolicy -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+Write-Host "Task Manager disabled for '$KioskUser' and system."
 
 Write-Host "============================================================"
 Write-Host "SUCCESS: SecureKiosk is now configured as the dedicated shell for '$KioskUser'."

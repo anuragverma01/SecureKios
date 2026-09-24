@@ -42,6 +42,34 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
 
                 if (OperatingSystem.IsWindows())
                 {
+                    try
+                    {
+                        var disarmInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "schtasks.exe",
+                            Arguments = "/run /tn \"SecureKioskDisarm\"",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        using var proc = System.Diagnostics.Process.Start(disarmInfo);
+                        proc?.WaitForExit(3000);
+                    }
+                    catch { }
+
+                    try
+                    {
+                        var delInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "schtasks.exe",
+                            Arguments = "/delete /tn \"SecureKioskInstantLaunch\" /f",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        using var delProc = System.Diagnostics.Process.Start(delInfo);
+                        delProc?.WaitForExit(3000);
+                    }
+                    catch { }
+
                     using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
                     key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
                     key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);

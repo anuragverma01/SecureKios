@@ -31,10 +31,18 @@ $winlogonKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows NT\CurrentV
 if (-not (Test-Path $winlogonKey)) { New-Item -Path $winlogonKey -Force | Out-Null }
 Set-ItemProperty -Path $winlogonKey -Name 'Shell' -Value "`"$appPath`"" -Force
 
-# 2. Disable Task Manager for Kiosk User in Host Registry
+# 2. Disable Task Manager in Host Registry (Machine and User hives)
 $policyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
 if (-not (Test-Path $policyKey)) { New-Item -Path $policyKey -Force | Out-Null }
 Set-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+
+$hklmPolicyKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+if (-not (Test-Path $hklmPolicyKey)) { New-Item -Path $hklmPolicyKey -Force | Out-Null }
+Set-ItemProperty -Path $hklmPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+
+$hkcuPolicyKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+if (-not (Test-Path $hkcuPolicyKey)) { New-Item -Path $hkcuPolicyKey -Force | Out-Null }
+Set-ItemProperty -Path $hkcuPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
 
 Write-Host ""
 Write-Host "============================================================"
