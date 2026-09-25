@@ -68,6 +68,11 @@ if (Test-Path $hklmCmdPath) {
 schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null
 schtasks.exe /delete /tn "SecureKioskDisarm" /f 2>$null | Out-Null
 
+$credFile = Join-Path $env:ProgramData 'SecureKiosk\credential.bin'
+if (Test-Path $credFile) {
+    Remove-Item -Path $credFile -Force -ErrorAction SilentlyContinue
+}
+
 # 4. Optimize Windows Startup Delay to 0 ms so apps open instantly
 $currentUser = $env:USERNAME
 try {
