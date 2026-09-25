@@ -75,10 +75,23 @@ if ($sid) {
     Set-ItemProperty -Path $userPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
 }
 
-# 6. Create Elevated Disarm Task (triggered upon authorized '5013' exit or recovery)
-$disarmScript = "Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue; Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue; if ('$sid') { Remove-ItemProperty -Path 'Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue }; schtasks.exe /delete /tn 'SecureKioskInstantLaunch' /f 2>`$null; Start-Process explorer.exe -ErrorAction SilentlyContinue"
-$disarmTaskAction = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command `"$disarmScript`""
-schtasks.exe /create /tn "SecureKioskDisarm" /tr "$disarmTaskAction" /sc once /st 00:00 /f /rl highest | Out-Null
+# 6. Create Dedicated Elevated Disarm Script and Task (triggered upon authorized '5013' exit)
+$kioskDir = Join-Path $env:ProgramData 'SecureKiosk'
+if (-not (Test-Path $kioskDir)) { New-Item -ItemType Directory -Path $kioskDir -Force | Out-Null }
+
+$disarmCmdPath = Join-Path $kioskDir 'disarm.cmd'
+$sidLine = if ($sid) { "reg delete `"HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System`" /v `"DisableTaskMgr`" /f >nul 2>&1" } else { "" }
+$disarmContent = @"
+@echo off
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /f >nul 2>&1
+$sidLine
+schtasks /delete /tn "SecureKioskInstantLaunch" /f >nul 2>&1
+exit /b 0
+"@
+Set-Content -Path $disarmCmdPath -Value $disarmContent -Encoding Ascii -Force
+
+schtasks.exe /create /tn "SecureKioskDisarm" /tr "`"$disarmCmdPath`"" /sc once /st 00:00 /f /rl highest | Out-Null
 
 # 7. Launch SecureKiosk immediately
 Write-Host "Launching SecureKiosk..."

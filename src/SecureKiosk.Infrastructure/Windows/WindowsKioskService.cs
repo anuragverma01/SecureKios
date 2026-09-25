@@ -58,6 +58,39 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
 
                     try
                     {
+                        var progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                        var disarmScript = System.IO.Path.Combine(progData, "SecureKiosk", "disarm.cmd");
+                        if (System.IO.File.Exists(disarmScript))
+                        {
+                            var cmdInfo = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/c \"{disarmScript}\"",
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+                            using var cmdProc = System.Diagnostics.Process.Start(cmdInfo);
+                            cmdProc?.WaitForExit(3000);
+                        }
+                    }
+                    catch { }
+
+                    try
+                    {
+                        var regInfo = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "reg.exe",
+                            Arguments = "delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v \"DisableTaskMgr\" /f",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        using var regProc = System.Diagnostics.Process.Start(regInfo);
+                        regProc?.WaitForExit(2000);
+                    }
+                    catch { }
+
+                    try
+                    {
                         var delInfo = new System.Diagnostics.ProcessStartInfo
                         {
                             FileName = "schtasks.exe",
