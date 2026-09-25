@@ -18,19 +18,29 @@ if (Test-Path $winlogonKey) {
     Remove-ItemProperty -Path $winlogonKey -Name 'Shell' -ErrorAction SilentlyContinue
 }
 
-# 2. Re-enable Task Manager in Host Registry (both User and Machine hives)
-$policyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-if (Test-Path $policyKey) {
-    Remove-ItemProperty -Path $policyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+# 2. Re-enable Task Manager, Ctrl+Alt+Del options, and Command Prompt
+$policiesToRemove = @(
+    'DisableTaskMgr', 'DisableLockWorkstation', 'DisableChangePassword', 'HideFastUserSwitching'
+)
+$explorerPoliciesToRemove = @(
+    'NoLogoff', 'NoRun'
+)
+
+foreach ($name in $policiesToRemove) {
+    Remove-ItemProperty -Path "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name $name -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System' -Name $name -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name $name -ErrorAction SilentlyContinue
 }
-$hkcuPolicyKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-if (Test-Path $hkcuPolicyKey) {
-    Remove-ItemProperty -Path $hkcuPolicyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+
+foreach ($name in $explorerPoliciesToRemove) {
+    Remove-ItemProperty -Path "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name $name -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name $name -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name $name -ErrorAction SilentlyContinue
 }
-$hklmPolicyKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-if (Test-Path $hklmPolicyKey) {
-    Remove-ItemProperty -Path $hklmPolicyKey -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
-}
+
+Remove-ItemProperty -Path "Registry::HKEY_USERS\$sid\Software\Policies\Microsoft\Windows\System" -Name 'DisableCMD' -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path 'HKCU:\Software\Policies\Microsoft\Windows\System' -Name 'DisableCMD' -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'DisableCMD' -ErrorAction SilentlyContinue
 
 # 3. Clean up Scheduled Tasks and Fast Launch Run key
 schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null

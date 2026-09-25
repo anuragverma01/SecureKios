@@ -60,19 +60,44 @@ Set-ItemProperty -Path $runKey -Name 'SecureKioskFastLaunch' -Value "explorer.ex
 $taskAction = "explorer.exe shell:AppsFolder\$appId"
 schtasks.exe /create /tn "SecureKioskInstantLaunch" /tr "$taskAction" /sc onlogon /f /rl highest | Out-Null
 
-# 5. Disable Task Manager in Host Registry (Machine and User hives)
-$hklmPolicyKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
-if (-not (Test-Path $hklmPolicyKey)) { New-Item -Path $hklmPolicyKey -Force | Out-Null }
-Set-ItemProperty -Path $hklmPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+# 5. Lock down Ctrl+Alt+Del, Command Prompt, and Task Manager across Machine and User hives
+$policiesToSet = @(
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableTaskMgr'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableLockWorkstation'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableChangePassword'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'HideFastUserSwitching'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoLogoff'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoRun'; Value = 1 },
+    @{ Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; Name = 'DisableCMD'; Value = 2 },
 
-$hkcuPolicyKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'
-if (-not (Test-Path $hkcuPolicyKey)) { New-Item -Path $hkcuPolicyKey -Force | Out-Null }
-Set-ItemProperty -Path $hkcuPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+    @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableTaskMgr'; Value = 1 },
+    @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableLockWorkstation'; Value = 1 },
+    @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableChangePassword'; Value = 1 },
+    @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoLogoff'; Value = 1 },
+    @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoRun'; Value = 1 },
+    @{ Path = 'HKCU:\Software\Policies\Microsoft\Windows\System'; Name = 'DisableCMD'; Value = 2 }
+)
+
+foreach ($p in $policiesToSet) {
+    if (-not (Test-Path $p.Path)) { New-Item -Path $p.Path -Force | Out-Null }
+    Set-ItemProperty -Path $p.Path -Name $p.Name -Value $p.Value -Type DWord -Force
+}
 
 if ($sid) {
-    $userPolicyKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-    if (-not (Test-Path $userPolicyKey)) { New-Item -Path $userPolicyKey -Force | Out-Null }
-    Set-ItemProperty -Path $userPolicyKey -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+    $userSystemPath = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+    if (-not (Test-Path $userSystemPath)) { New-Item -Path $userSystemPath -Force | Out-Null }
+    Set-ItemProperty -Path $userSystemPath -Name 'DisableTaskMgr' -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $userSystemPath -Name 'DisableLockWorkstation' -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $userSystemPath -Name 'DisableChangePassword' -Value 1 -Type DWord -Force
+
+    $userExplorerPath = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+    if (-not (Test-Path $userExplorerPath)) { New-Item -Path $userExplorerPath -Force | Out-Null }
+    Set-ItemProperty -Path $userExplorerPath -Name 'NoLogoff' -Value 1 -Type DWord -Force
+    Set-ItemProperty -Path $userExplorerPath -Name 'NoRun' -Value 1 -Type DWord -Force
+
+    $userCmdPath = "Registry::HKEY_USERS\$sid\Software\Policies\Microsoft\Windows\System"
+    if (-not (Test-Path $userCmdPath)) { New-Item -Path $userCmdPath -Force | Out-Null }
+    Set-ItemProperty -Path $userCmdPath -Name 'DisableCMD' -Value 2 -Type DWord -Force
 }
 
 # 6. Create Dedicated Elevated Disarm Script and Task (triggered upon authorized '5013' exit)
@@ -80,12 +105,36 @@ $kioskDir = Join-Path $env:ProgramData 'SecureKiosk'
 if (-not (Test-Path $kioskDir)) { New-Item -ItemType Directory -Path $kioskDir -Force | Out-Null }
 
 $disarmCmdPath = Join-Path $kioskDir 'disarm.cmd'
-$sidLine = if ($sid) { "reg delete `"HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System`" /v `"DisableTaskMgr`" /f >nul 2>&1" } else { "" }
+$sidLines = if ($sid) {
+@"
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableLockWorkstation" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableChangePassword" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoLogoff" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Policies\Microsoft\Windows\System" /v "DisableCMD" /f >nul 2>&1
+"@
+} else { "" }
+
 $disarmContent = @"
 @echo off
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableLockWorkstation" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableChangePassword" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "HideFastUserSwitching" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoLogoff" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "DisableCMD" /f >nul 2>&1
+
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /f >nul 2>&1
-$sidLine
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableLockWorkstation" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableChangePassword" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoLogoff" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /f >nul 2>&1
+reg delete "HKCU\Software\Policies\Microsoft\Windows\System" /v "DisableCMD" /f >nul 2>&1
+
+$sidLines
+
 schtasks /delete /tn "SecureKioskInstantLaunch" /f >nul 2>&1
 exit /b 0
 "@
