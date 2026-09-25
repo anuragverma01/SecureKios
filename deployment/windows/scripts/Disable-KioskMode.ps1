@@ -46,6 +46,9 @@ Remove-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Na
 schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null
 schtasks.exe /delete /tn "SecureKioskDisarm" /f 2>$null | Out-Null
 Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'SecureKioskFastLaunch' -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Run" -Name 'SecureKioskFastLaunch' -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize' -Name 'StartupDelayInMSec','WaitForIdleState' -ErrorAction SilentlyContinue
+Remove-ItemProperty -Path "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize" -Name 'StartupDelayInMSec','WaitForIdleState' -ErrorAction SilentlyContinue
 
 # 4. Ensure Explorer desktop process is running
 $exp = Get-Process -Name 'explorer' -ErrorAction SilentlyContinue

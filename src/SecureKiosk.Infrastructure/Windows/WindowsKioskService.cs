@@ -33,135 +33,171 @@ public sealed partial class WindowsKioskService : IWindowsKioskService
 
         if (OperatingSystem.IsWindows() && exitCode == ExitCodes.AuthorizedExit)
         {
-            // Disarm startup task so the app does NOT reopen on restart/power off
-            // after an authorized administrator exit.
-            try
+            if (OperatingSystem.IsWindows())
             {
-                var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
-                task.Disable();
-
-                if (OperatingSystem.IsWindows())
+                // 1. Direct In-Process Registry Cleanup (HKCU) - Immediate and guaranteed
+                try
                 {
-                    try
+                    using var sysKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System", writable: true);
+                    if (sysKey != null)
                     {
-                        var disarmInfo = new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = "schtasks.exe",
-                            Arguments = "/run /tn \"SecureKioskDisarm\"",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-                        using var proc = System.Diagnostics.Process.Start(disarmInfo);
-                        proc?.WaitForExit(3000);
+                        sysKey.DeleteValue("DisableTaskMgr", throwOnMissingValue: false);
+                        sysKey.DeleteValue("DisableLockWorkstation", throwOnMissingValue: false);
+                        sysKey.DeleteValue("DisableChangePassword", throwOnMissingValue: false);
                     }
-                    catch { }
+                }
+                catch { }
 
-                    try
+                try
+                {
+                    using var expKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", writable: true);
+                    if (expKey != null)
                     {
-                        var progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-                        var disarmScript = System.IO.Path.Combine(progData, "SecureKiosk", "disarm.cmd");
-                        if (System.IO.File.Exists(disarmScript))
-                        {
-                            var cmdInfo = new System.Diagnostics.ProcessStartInfo
-                            {
-                                FileName = "cmd.exe",
-                                Arguments = $"/c \"{disarmScript}\"",
-                                UseShellExecute = false,
-                                CreateNoWindow = true
-                            };
-                            using var cmdProc = System.Diagnostics.Process.Start(cmdInfo);
-                            cmdProc?.WaitForExit(3000);
-                        }
+                        expKey.DeleteValue("NoLogoff", throwOnMissingValue: false);
+                        expKey.DeleteValue("NoRun", throwOnMissingValue: false);
                     }
-                    catch { }
+                }
+                catch { }
 
-                    // Clean up all HKCU lockdown policies directly via reg.exe
-                    string[] sysPolicies = { "DisableTaskMgr", "DisableLockWorkstation", "DisableChangePassword" };
-                    string[] expPolicies = { "NoLogoff", "NoRun" };
+                try
+                {
+                    using var cmdKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\System", writable: true);
+                    cmdKey?.DeleteValue("DisableCMD", throwOnMissingValue: false);
+                }
+                catch { }
 
-                    foreach (var val in sysPolicies)
+                try
+                {
+                    using var runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+                    runKey?.DeleteValue("SecureKioskFastLaunch", throwOnMissingValue: false);
+                }
+                catch { }
+
+                try
+                {
+                    using var serKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
+                    if (serKey != null)
                     {
-                        try
-                        {
-                            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                            {
-                                FileName = "reg.exe",
-                                Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v \"{val}\" /f",
-                                UseShellExecute = false,
-                                CreateNoWindow = true
-                            });
-                            p?.WaitForExit(1000);
-                        }
-                        catch { }
+                        serKey.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
+                        serKey.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
                     }
+                }
+                catch { }
 
-                    foreach (var val in expPolicies)
-                    {
-                        try
-                        {
-                            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                            {
-                                FileName = "reg.exe",
-                                Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\" /v \"{val}\" /f",
-                                UseShellExecute = false,
-                                CreateNoWindow = true
-                            });
-                            p?.WaitForExit(1000);
-                        }
-                        catch { }
-                    }
-
+                // 2. Redundant reg.exe deletion
+                string[] sysPolicies = { "DisableTaskMgr", "DisableLockWorkstation", "DisableChangePassword" };
+                foreach (var val in sysPolicies)
+                {
                     try
                     {
                         using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                         {
                             FileName = "reg.exe",
-                            Arguments = "delete \"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\" /v \"DisableCMD\" /f",
+                            Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v \"{val}\" /f",
                             UseShellExecute = false,
                             CreateNoWindow = true
                         });
-                        p?.WaitForExit(1000);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        var delInfo = new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = "schtasks.exe",
-                            Arguments = "/delete /tn \"SecureKioskInstantLaunch\" /f",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-                        using var delProc = System.Diagnostics.Process.Start(delInfo);
-                        delProc?.WaitForExit(3000);
-                    }
-                    catch { }
-
-                    try
-                    {
-                        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
-                        key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
-                        key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
-
-                        using var runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
-                        runKey?.DeleteValue("SecureKioskFastLaunch", throwOnMissingValue: false);
-
-                        using var policyKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System", writable: true);
-                        foreach (var val in sysPolicies) policyKey?.DeleteValue(val, throwOnMissingValue: false);
-
-                        using var expKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", writable: true);
-                        foreach (var val in expPolicies) expKey?.DeleteValue(val, throwOnMissingValue: false);
-
-                        using var cmdKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\System", writable: true);
-                        cmdKey?.DeleteValue("DisableCMD", throwOnMissingValue: false);
+                        p?.WaitForExit(500);
                     }
                     catch { }
                 }
-            }
-            catch
-            {
-                // Fallback for unpackaged or unsupported environments
+
+                string[] expPolicies = { "NoLogoff", "NoRun" };
+                foreach (var val in expPolicies)
+                {
+                    try
+                    {
+                        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "reg.exe",
+                            Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\" /v \"{val}\" /f",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        });
+                        p?.WaitForExit(500);
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "reg.exe",
+                        Arguments = "delete \"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\" /v \"DisableCMD\" /f",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    p?.WaitForExit(500);
+                }
+                catch { }
+
+                try
+                {
+                    using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "reg.exe",
+                        Arguments = "delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v \"SecureKioskFastLaunch\" /f",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    p?.WaitForExit(500);
+                }
+                catch { }
+
+                // 3. Delete scheduled tasks if present
+                try
+                {
+                    using var delProc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "schtasks.exe",
+                        Arguments = "/delete /tn \"SecureKioskInstantLaunch\" /f",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    delProc?.WaitForExit(1000);
+                }
+                catch { }
+
+                // 4. Run disarm helper if present
+                try
+                {
+                    using var proc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "schtasks.exe",
+                        Arguments = "/run /tn \"SecureKioskDisarm\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    proc?.WaitForExit(1000);
+                }
+                catch { }
+
+                try
+                {
+                    var progData = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                    var disarmScript = System.IO.Path.Combine(progData, "SecureKiosk", "disarm.cmd");
+                    if (System.IO.File.Exists(disarmScript))
+                    {
+                        using var cmdProc = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = $"/c \"{disarmScript}\"",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        });
+                        cmdProc?.WaitForExit(1000);
+                    }
+                }
+                catch { }
+
+                // 5. Disarm UWP StartupTask (in isolated try-catch so failure never blocks registry cleanup)
+                try
+                {
+                    var task = await global::Windows.ApplicationModel.StartupTask.GetAsync("SecureKioskStartupTask");
+                    task.Disable();
+                }
+                catch { }
             }
 
             // Only initiate a Windows session logoff when Shell Launcher is actually active.

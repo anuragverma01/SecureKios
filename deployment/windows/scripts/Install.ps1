@@ -47,7 +47,28 @@ try {
     }
 } catch { }
 
-# 3. Optimize Windows Startup Delay to 0 ms so apps open instantly
+# 3. Clean up any existing HKLM lockdown policies and elevated scheduled tasks
+# Policies must ONLY reside in HKCU/HKU so the user app can cleanly remove them on exit!
+$hklmSysPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+if (Test-Path $hklmSysPath) {
+    Remove-ItemProperty -Path $hklmSysPath -Name 'DisableTaskMgr' -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $hklmSysPath -Name 'DisableLockWorkstation' -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $hklmSysPath -Name 'DisableChangePassword' -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $hklmSysPath -Name 'HideFastUserSwitching' -ErrorAction SilentlyContinue
+}
+$hklmExpPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'
+if (Test-Path $hklmExpPath) {
+    Remove-ItemProperty -Path $hklmExpPath -Name 'NoLogoff' -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $hklmExpPath -Name 'NoRun' -ErrorAction SilentlyContinue
+}
+$hklmCmdPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'
+if (Test-Path $hklmCmdPath) {
+    Remove-ItemProperty -Path $hklmCmdPath -Name 'DisableCMD' -ErrorAction SilentlyContinue
+}
+schtasks.exe /delete /tn "SecureKioskInstantLaunch" /f 2>$null | Out-Null
+schtasks.exe /delete /tn "SecureKioskDisarm" /f 2>$null | Out-Null
+
+# 4. Optimize Windows Startup Delay to 0 ms so apps open instantly
 $currentUser = $env:USERNAME
 try {
     $sid = ([System.Security.Principal.NTAccount]$currentUser).Translate([System.Security.Principal.SecurityIdentifier]).Value
@@ -67,25 +88,19 @@ if ($sid) {
     Set-ItemProperty -Path $userSerializeKey -Name 'WaitForIdleState' -Value 0 -Type DWord -Force
 }
 
-# 4. Instant Launch Task Scheduler (< 1s at logon) & Run Key
+# 5. Fast Launch via HKCU Run Key (cleanly manageable and deletable by the app on exit)
 $appId = "$($pkg.PackageFamilyName)!App"
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 Set-ItemProperty -Path $runKey -Name 'SecureKioskFastLaunch' -Value "explorer.exe shell:AppsFolder\$appId" -Force
 
-# Create Scheduled Task to trigger the exact second the user signs in (eliminates Explorer 30s idle delay)
-$taskAction = "explorer.exe shell:AppsFolder\$appId"
-schtasks.exe /create /tn "SecureKioskInstantLaunch" /tr "$taskAction" /sc onlogon /f /rl highest | Out-Null
+if ($sid) {
+    $userRunKey = "Registry::HKEY_USERS\$sid\Software\Microsoft\Windows\CurrentVersion\Run"
+    if (-not (Test-Path $userRunKey)) { New-Item -Path $userRunKey -Force | Out-Null }
+    Set-ItemProperty -Path $userRunKey -Name 'SecureKioskFastLaunch' -Value "explorer.exe shell:AppsFolder\$appId" -Force
+}
 
-# 5. Lock down Ctrl+Alt+Del, Command Prompt, and Task Manager across Machine and User hives
+# 6. Lock down Ctrl+Alt+Del, Command Prompt, and Task Manager strictly in User Hive (HKCU / HKU)
 $policiesToSet = @(
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableTaskMgr'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableLockWorkstation'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableChangePassword'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'HideFastUserSwitching'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoLogoff'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer'; Name = 'NoRun'; Value = 1 },
-    @{ Path = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System'; Name = 'DisableCMD'; Value = 2 },
-
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableTaskMgr'; Value = 1 },
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableLockWorkstation'; Value = 1 },
     @{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\System'; Name = 'DisableChangePassword'; Value = 1 },
@@ -116,7 +131,7 @@ if ($sid) {
     Set-ItemProperty -Path $userCmdPath -Name 'DisableCMD' -Value 2 -Type DWord -Force
 }
 
-# 6. Create Dedicated Elevated Disarm Script and Task (triggered upon authorized '5013' exit)
+# 7. Create Dedicated Disarm Script for emergency recovery
 $kioskDir = Join-Path $env:ProgramData 'SecureKiosk'
 if (-not (Test-Path $kioskDir)) { New-Item -ItemType Directory -Path $kioskDir -Force | Out-Null }
 
@@ -129,6 +144,7 @@ reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\System" 
 reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoLogoff" /f >nul 2>&1
 reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /f >nul 2>&1
 reg delete "HKU\$sid\Software\Policies\Microsoft\Windows\System" /v "DisableCMD" /f >nul 2>&1
+reg delete "HKU\$sid\Software\Microsoft\Windows\CurrentVersion\Run" /v "SecureKioskFastLaunch" /f >nul 2>&1
 "@
 } else { "" }
 
@@ -148,6 +164,7 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoLogoff" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /f >nul 2>&1
 reg delete "HKCU\Software\Policies\Microsoft\Windows\System" /v "DisableCMD" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "SecureKioskFastLaunch" /f >nul 2>&1
 
 $sidLines
 
