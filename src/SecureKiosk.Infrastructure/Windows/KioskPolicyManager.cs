@@ -38,6 +38,41 @@ public static class KioskPolicyManager
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EnableWindow(IntPtr hWnd, bool bEnable);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
+
+    /// <summary>
+    /// Programmatically shows or hides the desktop icons view window (SHELLDLL_DefView).
+    /// </summary>
+    public static void SetDesktopIconsVisibility(bool visible)
+    {
+        try
+        {
+            int cmd = visible ? SW_SHOW : SW_HIDE;
+
+            var hProgman = FindWindow("Progman", null);
+            if (hProgman != IntPtr.Zero)
+            {
+                var hDefView = FindWindowEx(hProgman, IntPtr.Zero, "SHELLDLL_DefView", null);
+                if (hDefView != IntPtr.Zero)
+                {
+                    ShowWindow(hDefView, cmd);
+                }
+            }
+
+            IntPtr hWorkerW = IntPtr.Zero;
+            while ((hWorkerW = FindWindowEx(IntPtr.Zero, hWorkerW, "WorkerW", null)) != IntPtr.Zero)
+            {
+                var hDefView = FindWindowEx(hWorkerW, IntPtr.Zero, "SHELLDLL_DefView", null);
+                if (hDefView != IntPtr.Zero)
+                {
+                    ShowWindow(hDefView, cmd);
+                }
+            }
+        }
+        catch { }
+    }
+
     /// <summary>
     /// Completely hides and disables the Windows Taskbar on all monitors.
     /// </summary>
@@ -132,6 +167,8 @@ public static class KioskPolicyManager
             expKey?.SetValue("NoSetTaskbar", 1, RegistryValueKind.DWord);
             expKey?.SetValue("LockTaskbar", 1, RegistryValueKind.DWord);
             expKey?.SetValue("DisallowRun", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoDesktop", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoDesktopCreation", 1, RegistryValueKind.DWord);
         }
         catch { }
 
@@ -140,6 +177,13 @@ public static class KioskPolicyManager
             using var polExpKey = Registry.CurrentUser.CreateSubKey(@"Software\Policies\Microsoft\Windows\Explorer");
             polExpKey?.SetValue("NoRun", 1, RegistryValueKind.DWord);
             polExpKey?.SetValue("DisableSearchBoxSuggestions", 1, RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
+            using var edgeKey = Registry.CurrentUser.CreateSubKey(@"Software\Policies\Microsoft\Windows\EdgeUI");
+            edgeKey?.SetValue("AllowEdgeSwipe", 0, RegistryValueKind.DWord);
         }
         catch { }
 
@@ -156,8 +200,23 @@ public static class KioskPolicyManager
             using var padKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad");
             padKey?.SetValue("FourFingerTapEnabled", 0, RegistryValueKind.DWord);
             padKey?.SetValue("FourFingerSwipeEnabled", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipes", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipeUp", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipeDown", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipeLeft", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipeRight", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerPress", 0, RegistryValueKind.DWord);
             padKey?.SetValue("ThreeFingerTapEnabled", 0, RegistryValueKind.DWord);
             padKey?.SetValue("ThreeFingerSwipeEnabled", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipes", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipeUp", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipeDown", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipeLeft", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipeRight", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerPress", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("EnableSwitchDesktopGestures", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("SwitchDesktopGesturesMode", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("EnableEdgy", 0, RegistryValueKind.DWord);
         }
         catch { }
 
@@ -165,6 +224,7 @@ public static class KioskPolicyManager
         {
             using var advKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
             advKey?.SetValue("ShowTaskViewButton", 0, RegistryValueKind.DWord);
+            advKey?.SetValue("HideIcons", 1, RegistryValueKind.DWord);
         }
         catch { }
 
@@ -221,8 +281,20 @@ public static class KioskPolicyManager
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSetTaskbar", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "LockTaskbar", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "DisallowRun", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktop", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktopCreation", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Policies\Microsoft\Windows\Explorer", "NoRun", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideIcons", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Policies\Microsoft\Windows\EdgeUI", "AllowEdgeSwipe", "REG_DWORD", "0");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerTapEnabled", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipeEnabled", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipes", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerTapEnabled", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipeEnabled", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipes", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableSwitchDesktopGestures", "REG_DWORD", "0");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableEdgy", "REG_DWORD", "0");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "1", "REG_SZ", "taskmgr.exe");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "2", "REG_SZ", "cmd.exe");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "3", "REG_SZ", "powershell.exe");
@@ -237,7 +309,8 @@ public static class KioskPolicyManager
             RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch", "REG_SZ", $"explorer.exe shell:AppsFolder\\{packageFamilyName}!App");
         }
 
-        // 3. Immediately hide and disable Taskbar
+        // 3. Immediately hide desktop icons and disable Taskbar
+        SetDesktopIconsVisibility(false);
         HideTaskbar();
 
         NotifyPolicyChange();
@@ -279,6 +352,8 @@ public static class KioskPolicyManager
                 expKey.DeleteValue("NoSetTaskbar", throwOnMissingValue: false);
                 expKey.DeleteValue("LockTaskbar", throwOnMissingValue: false);
                 expKey.DeleteValue("DisallowRun", throwOnMissingValue: false);
+                expKey.DeleteValue("NoDesktop", throwOnMissingValue: false);
+                expKey.DeleteValue("NoDesktopCreation", throwOnMissingValue: false);
             }
         }
         catch { }
@@ -288,6 +363,13 @@ public static class KioskPolicyManager
             using var polExpKey = Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\Explorer", writable: true);
             polExpKey?.DeleteValue("NoRun", throwOnMissingValue: false);
             polExpKey?.DeleteValue("DisableSearchBoxSuggestions", throwOnMissingValue: false);
+        }
+        catch { }
+
+        try
+        {
+            using var edgeKey = Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\EdgeUI", writable: true);
+            edgeKey?.DeleteValue("AllowEdgeSwipe", throwOnMissingValue: false);
         }
         catch { }
 
@@ -306,8 +388,23 @@ public static class KioskPolicyManager
             {
                 padKey.DeleteValue("FourFingerTapEnabled", throwOnMissingValue: false);
                 padKey.DeleteValue("FourFingerSwipeEnabled", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipes", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipeUp", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipeDown", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipeLeft", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipeRight", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerPress", throwOnMissingValue: false);
                 padKey.DeleteValue("ThreeFingerTapEnabled", throwOnMissingValue: false);
                 padKey.DeleteValue("ThreeFingerSwipeEnabled", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipes", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipeUp", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipeDown", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipeLeft", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipeRight", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerPress", throwOnMissingValue: false);
+                padKey.DeleteValue("EnableSwitchDesktopGestures", throwOnMissingValue: false);
+                padKey.DeleteValue("SwitchDesktopGesturesMode", throwOnMissingValue: false);
+                padKey.DeleteValue("EnableEdgy", throwOnMissingValue: false);
             }
         }
         catch { }
@@ -316,6 +413,7 @@ public static class KioskPolicyManager
         {
             using var advKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", writable: true);
             advKey?.DeleteValue("ShowTaskViewButton", throwOnMissingValue: false);
+            advKey?.DeleteValue("HideIcons", throwOnMissingValue: false);
         }
         catch { }
 
@@ -365,8 +463,20 @@ public static class KioskPolicyManager
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSetTaskbar");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "LockTaskbar");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "DisallowRun");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktop");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktopCreation");
         RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\Explorer", "NoRun");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideIcons");
+        RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\EdgeUI", "AllowEdgeSwipe");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerTapEnabled");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipeEnabled");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipes");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerTapEnabled");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipeEnabled");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipes");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableSwitchDesktopGestures");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableEdgy");
         RunRegKeyDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun");
         RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\System", "DisableCMD");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch");
@@ -419,7 +529,8 @@ public static class KioskPolicyManager
         }
         catch { }
 
-        // 5. Restore and re-enable Taskbar
+        // 5. Restore desktop icons and re-enable Taskbar
+        SetDesktopIconsVisibility(true);
         ShowTaskbar();
 
         // 6. Notify Windows Shell and system to refresh policies immediately

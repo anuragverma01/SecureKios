@@ -16,14 +16,46 @@ public static class KioskSecurityWatchdog
 {
     private static CancellationTokenSource? _cts;
     private static readonly object _lock = new();
+    private static IntPtr _kioskHwnd = IntPtr.Zero;
 
     private const uint WM_CLOSE = 0x0010;
+    private const int SW_RESTORE = 9;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_SHOWWINDOW = 0x0040;
+    private const uint GA_ROOT = 2;
+    private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string? lpszClass, string? lpszWindow);
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fUnknown);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
     private static readonly string[] BlockedProcesses =
     [
@@ -36,8 +68,14 @@ public static class KioskSecurityWatchdog
         "mmc",
         "taskkill",
         "SearchHost",
-        "SearchApp"
+        "SearchApp",
+        "StartMenuExperienceHost"
     ];
+
+    public static void RegisterKioskWindow(IntPtr hwnd)
+    {
+        _kioskHwnd = hwnd;
+    }
 
     public static void Start()
     {
@@ -58,6 +96,28 @@ public static class KioskSecurityWatchdog
                         CloseFileExplorerWindows();
                         CloseRunDialogs();
                         KioskPolicyManager.HideTaskbar();
+                        KioskPolicyManager.SetDesktopIconsVisibility(false);
+
+                        if (_kioskHwnd != IntPtr.Zero)
+                        {
+                            if (IsIconic(_kioskHwnd))
+                            {
+                                ShowWindow(_kioskHwnd, SW_RESTORE);
+                                SetWindowPos(_kioskHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                                SetForegroundWindow(_kioskHwnd);
+                                SwitchToThisWindow(_kioskHwnd, true);
+                            }
+                            else
+                            {
+                                var foreground = GetForegroundWindow();
+                                if (foreground != IntPtr.Zero && foreground != _kioskHwnd && GetAncestor(foreground, GA_ROOT) != _kioskHwnd)
+                                {
+                                    SetWindowPos(_kioskHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                                    SetForegroundWindow(_kioskHwnd);
+                                    SwitchToThisWindow(_kioskHwnd, true);
+                                }
+                            }
+                        }
                     }
                     catch
                     {
@@ -81,6 +141,7 @@ public static class KioskSecurityWatchdog
     {
         lock (_lock)
         {
+            _kioskHwnd = IntPtr.Zero;
             if (_cts != null)
             {
                 _cts.Cancel();
