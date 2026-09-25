@@ -186,15 +186,18 @@ jobs:
           }
           Write-Host "Setup executable built at: $(Join-Path $artifactDir 'SecureKiosk_Setup.exe')"
 
-      - name: Upload SecureKiosk Packages
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
+          $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+          $setupExe = Join-Path $artifactDir 'SecureKiosk_Setup.exe'
+          if (Test-Path $setupExe) {
+            signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /s My $setupExe
+            Write-Host "SecureKiosk_Setup.exe signed with publisher: Anurag"
+          }
+
+      - name: Upload SecureKiosk Setup
         uses: actions/upload-artifact@v4
         with:
-          name: SecureKiosk-Package
-          path: |
-            ${{ github.workspace }}/artifacts/SecureKiosk_Setup.exe
-            ${{ github.workspace }}/artifacts/SecureKiosk.App_1.0.0.0_x64.msix
-            ${{ github.workspace }}/artifacts/SecureKiosk-Dev.cer
-            ${{ github.workspace }}/artifacts/Install.bat
-            ${{ github.workspace }}/artifacts/Install.ps1
-          if-no-files-found: warn
+          name: SecureKiosk-Setup
+          path: ${{ github.workspace }}/artifacts/SecureKiosk_Setup.exe
+          if-no-files-found: error
           retention-days: 14

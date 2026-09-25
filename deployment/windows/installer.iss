@@ -1,6 +1,6 @@
 #define MyAppName "SecureKiosk"
 #define MyAppVersion "1.0.0.0"
-#define MyAppPublisher "SecureKiosk"
+#define MyAppPublisher "Anurag"
 
 [Setup]
 AppId={{D37E834B-6A10-4A3C-9B62-81D23E4571A2}

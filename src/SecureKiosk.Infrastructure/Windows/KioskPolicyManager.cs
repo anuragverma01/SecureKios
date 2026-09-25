@@ -153,6 +153,23 @@ public static class KioskPolicyManager
 
         try
         {
+            using var padKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad");
+            padKey?.SetValue("FourFingerTapEnabled", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("FourFingerSwipeEnabled", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerTapEnabled", 0, RegistryValueKind.DWord);
+            padKey?.SetValue("ThreeFingerSwipeEnabled", 0, RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
+            using var advKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
+            advKey?.SetValue("ShowTaskViewButton", 0, RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
             using var disKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun");
             disKey?.SetValue("1", "taskmgr.exe", RegistryValueKind.String);
             disKey?.SetValue("2", "cmd.exe", RegistryValueKind.String);
@@ -279,6 +296,26 @@ public static class KioskPolicyManager
             using var searchKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Search", writable: true);
             searchKey?.DeleteValue("SearchboxTaskbarMode", throwOnMissingValue: false);
             searchKey?.DeleteValue("BingSearchEnabled", throwOnMissingValue: false);
+        }
+        catch { }
+
+        try
+        {
+            using var padKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", writable: true);
+            if (padKey != null)
+            {
+                padKey.DeleteValue("FourFingerTapEnabled", throwOnMissingValue: false);
+                padKey.DeleteValue("FourFingerSwipeEnabled", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerTapEnabled", throwOnMissingValue: false);
+                padKey.DeleteValue("ThreeFingerSwipeEnabled", throwOnMissingValue: false);
+            }
+        }
+        catch { }
+
+        try
+        {
+            using var advKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", writable: true);
+            advKey?.DeleteValue("ShowTaskViewButton", throwOnMissingValue: false);
         }
         catch { }
 
