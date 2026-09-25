@@ -10,6 +10,9 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# 0. Unblock all extracted files to prevent Windows SmartScreen blocking
+Get-ChildItem -Path $scriptDir -Recurse -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
+
 # 1. Trust Certificate
 $certFile = Get-ChildItem -Path $scriptDir -Filter "*.cer" -File -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($certFile) {
@@ -30,6 +33,19 @@ Add-AppxPackage -Path $msixFile.FullName -ForceUpdateFromAnyVersion
 
 $pkg = Get-AppxPackage -Name 'SecureKiosk' -ErrorAction Stop
 Write-Host "SecureKiosk installed successfully: $($pkg.PackageFullName)"
+
+# Pre-authorize app in Windows Defender Firewall so it never prompts
+try {
+    $installLoc = $pkg.InstallLocation
+    if ($installLoc) {
+        $exe = Join-Path $installLoc "SecureKiosk.App.exe"
+        if (Test-Path $exe) {
+            Remove-NetFirewallRule -DisplayName "SecureKiosk*" -ErrorAction SilentlyContinue | Out-Null
+            New-NetFirewallRule -DisplayName "SecureKiosk Inbound" -Program $exe -Direction Inbound -Action Allow -Profile Any -ErrorAction SilentlyContinue | Out-Null
+            New-NetFirewallRule -DisplayName "SecureKiosk Outbound" -Program $exe -Direction Outbound -Action Allow -Profile Any -ErrorAction SilentlyContinue | Out-Null
+        }
+    }
+} catch { }
 
 # 3. Optimize Windows Startup Delay to 0 ms so apps open instantly
 $currentUser = $env:USERNAME
