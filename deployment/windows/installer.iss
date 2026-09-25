@@ -32,4 +32,4 @@ Source: "..\..\artifacts\SecureKiosk-Dev.cer"; DestDir: "{tmp}"; Flags: deleteaf
 Filename: "certutil.exe"; Parameters: "-addstore -f ""TrustedPeople"" ""{tmp}\SecureKiosk-Dev.cer"""; StatusMsg: "Configuring system security..."; Flags: runhidden waituntilterminated
 
 ; 2. Silently install the MSIX package and launch it
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-AppxPackage -Path '{tmp}\SecureKiosk.App_1.0.0.0_x64.msix'; $p = Get-AppxPackage -Name SecureKiosk; if ($p) { Start-Process (\"shell:AppsFolder\\\" + $p.PackageFamilyName + \"!App\") }"""; StatusMsg: "Installing SecureKiosk application..."; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Add-AppxPackage -Path '{tmp}\SecureKiosk.App_1.0.0.0_x64.msix'; $p = Get-AppxPackage -Name SecureKiosk; if ($p) { Start-Process 'explorer.exe' ('shell:AppsFolder\' + $p.PackageFamilyName + '!App') }"""; StatusMsg: "Installing SecureKiosk application..."; Flags: runhidden waituntilterminated

@@ -180,7 +180,10 @@ jobs:
           }
           $issFile = Join-Path $env:GITHUB_WORKSPACE 'deployment\windows\installer.iss'
           $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
-          & $isccPath /O"$artifactDir" /Q $issFile
+          & $isccPath /O"$artifactDir" $issFile
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
+          }
           Write-Host "Setup executable built at: $(Join-Path $artifactDir 'SecureKiosk_Setup.exe')"
 
       - name: Upload SecureKiosk Packages
