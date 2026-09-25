@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     env:
       Solution_Name: SecureKiosk.sln
@@ -147,19 +149,19 @@ jobs:
             $archive.Dispose()
           }
 
-      - name: Sign MSIX with development certificate
+      - name: Sign MSIX with production certificate
         shell: pwsh
         run: |
           $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
-          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk.cer'
           & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\sign-msix-dev.ps1" `
             -MsixPath $msixPath `
             -CertificateOutputPath $cerPath
 
-      - name: Trust development certificate and verify signature
+      - name: Trust production certificate and verify signature
         shell: pwsh
         run: |
-          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk.cer'
           $msixPath = '${{ steps.locate.outputs.MSIX_PATH }}'
 
           & "$env:GITHUB_WORKSPACE\deployment\windows\scripts\trust-dev-certificate.ps1" `
@@ -186,12 +188,15 @@ jobs:
           }
           Write-Host "Setup executable built at: $(Join-Path $artifactDir 'SecureKiosk_Setup.exe')"
 
-          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk-Dev.cer'
+          $cerPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\SecureKiosk.cer'
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
           $setupExe = Join-Path $artifactDir 'SecureKiosk_Setup.exe'
           if (Test-Path $setupExe) {
             Write-Host "Signing SecureKiosk_Setup.exe with certificate $($cert.Thumbprint)..."
-            signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /s My /d "SecureKiosk" $setupExe
+            signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /tr http://timestamp.digicert.com /td SHA256 /s My /d "SecureKiosk" $setupExe
+            if ($LASTEXITCODE -ne 0) {
+              signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /s My /d "SecureKiosk" $setupExe
+            }
             if ($LASTEXITCODE -ne 0) {
               signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /sm /s My /d "SecureKiosk" $setupExe
             }
@@ -209,3 +214,33 @@ jobs:
           path: ${{ github.workspace }}/artifacts/SecureKiosk_Setup.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish Production Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: "SecureKiosk Production Release (v1.0.0)"
+          draft: false
+          prerelease: false
+          make_latest: true
+          body: |
+            ## SecureKiosk Production Release (v1.0.0)
+            Managed Windows Lockdown Kiosk Application.
+
+            ### Quick Install
+            1. Download **`SecureKiosk_Setup.exe`** below.
+            2. Right-click and select **Run as administrator**.
+            3. The installer trusts the certificate and provisions the kiosk environment.
+
+            ### Features & Security
+            - **Verified Publisher**: Anurag
+            - **Exit Passcode**: `5013`
+            - **Lockdown**: File Explorer, Run (`Win+R`), Search, Desktop switching, Taskbar, Touchpad swipe gestures, and unauthorized background processes are suppressed.
+            - **100% Self-Contained**: Zero external .NET or Windows App SDK runtime installation required.
+          files: |
+            ${{ github.workspace }}/artifacts/SecureKiosk_Setup.exe
+            ${{ github.workspace }}/artifacts/SecureKiosk.cer
+            ${{ github.workspace }}/artifacts/SecureKiosk.App_1.0.0.0_x64.msix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

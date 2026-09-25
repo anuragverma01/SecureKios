@@ -22,7 +22,7 @@ function Get-CodeSigningCertificate([string]$Publisher) {
     Sort-Object NotAfter -Descending |
     Select-Object -First 1
   if ($null -ne $certificate) { return $certificate }
-  return New-SelfSignedCertificate -Type CodeSigningCert -Subject $Publisher -CertStoreLocation Cert:\CurrentUser\My -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyUsage DigitalSignature -NotAfter (Get-Date).AddYears(1) -FriendlyName 'SecureKiosk DEVELOPMENT MSIX signing'
+  return New-SelfSignedCertificate -Type CodeSigningCert -Subject $Publisher -CertStoreLocation Cert:\CurrentUser\My -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -KeyUsage DigitalSignature -NotAfter (Get-Date).AddYears(5) -FriendlyName 'SecureKiosk Production (Anurag)'
 }
 
 function Get-MsixManifestPublisher([string]$Path) {
@@ -90,14 +90,17 @@ if ($packagePublisher -cne $publisher) { throw 'The generated MSIX Publisher doe
 $certificate = Get-CodeSigningCertificate $publisher
 if ($certificate.Subject -cne $publisher) { throw 'The development certificate Subject does not exactly match the manifest Publisher.' }
 
-& $signTool.Source sign /fd SHA256 /sha1 $certificate.Thumbprint /s My $resolvedMsix
+& $signTool.Source sign /fd SHA256 /sha1 $certificate.Thumbprint /tr http://timestamp.digicert.com /td SHA256 /s My $resolvedMsix
+if ($LASTEXITCODE -ne 0) {
+  & $signTool.Source sign /fd SHA256 /sha1 $certificate.Thumbprint /s My $resolvedMsix
+}
 if ($LASTEXITCODE -ne 0) { throw "MSIX signing failed with exit code $LASTEXITCODE." }
 
 if ([string]::IsNullOrWhiteSpace($CertificateOutputPath)) {
-  $CertificateOutputPath = Join-Path (Split-Path -Parent $resolvedMsix) 'SecureKiosk-development.cer'
+  $CertificateOutputPath = Join-Path (Split-Path -Parent $resolvedMsix) 'SecureKiosk.cer'
 }
 Export-Certificate -Cert $certificate -FilePath $CertificateOutputPath -Force | Out-Null
-if (-not (Test-Path -LiteralPath $CertificateOutputPath -PathType Leaf)) { throw 'MSIX was signed but the public development certificate could not be exported.' }
+if (-not (Test-Path -LiteralPath $CertificateOutputPath -PathType Leaf)) { throw 'MSIX was signed but the public certificate could not be exported.' }
 
-Write-Host "MSIX signed with development certificate. Public certificate: $CertificateOutputPath"
-Write-Host 'For local test installation, import only this .cer into LocalMachine\TrustedPeople using trust-dev-certificate.ps1.'
+Write-Host "MSIX signed with production certificate. Public certificate: $CertificateOutputPath"
+Write-Host 'For local installation, import this .cer into LocalMachine\TrustedPeople and LocalMachine\Root.'

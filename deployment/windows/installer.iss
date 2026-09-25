@@ -12,6 +12,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 DisableDirPage=yes
 OutputBaseFilename=SecureKiosk_Setup
+SetupIconFile=app.ico
 Compression=lzma2/ultra
 SolidCompression=yes
 WizardStyle=modern
@@ -19,13 +20,19 @@ PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 Uninstallable=no
+VersionInfoVersion=1.0.0.0
+VersionInfoCompany=Anurag
+VersionInfoDescription=SecureKiosk Production Setup
+VersionInfoProductName=SecureKiosk
+VersionInfoProductVersion=1.0.0.0
+VersionInfoCopyright=Copyright (C) 2026 Anurag
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "..\..\artifacts\SecureKiosk.App_1.0.0.0_x64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "..\..\artifacts\SecureKiosk-Dev.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "..\..\artifacts\SecureKiosk.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "install-app.cmd"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Run]
