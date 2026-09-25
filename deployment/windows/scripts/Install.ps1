@@ -140,7 +140,19 @@ exit /b 0
 "@
 Set-Content -Path $disarmCmdPath -Value $disarmContent -Encoding Ascii -Force
 
-schtasks.exe /create /tn "SecureKioskDisarm" /tr "`"$disarmCmdPath`"" /sc once /st 00:00 /f /rl highest | Out-Null
+schtasks.exe /create /tn "SecureKioskDisarm" /tr "`"$disarmCmdPath`"" /sc once /st 00:00 /ru "SYSTEM" /rl highest /f | Out-Null
+
+# Grant Authenticated Users permission to trigger SecureKioskDisarm without UAC prompt
+try {
+    $scheduler = New-Object -ComObject "Schedule.Service"
+    $scheduler.Connect()
+    $task = $scheduler.GetFolder("\").GetTask("SecureKioskDisarm")
+    $sd = $task.GetSecurityDescriptor(0xF)
+    if ($sd -notmatch 'AU') {
+        $sd = $sd + "(A;;GRGX;;;AU)"
+        $task.SetSecurityDescriptor($sd, 0)
+    }
+} catch { }
 
 # 7. Launch SecureKiosk immediately
 Write-Host "Launching SecureKiosk..."

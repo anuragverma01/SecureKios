@@ -69,17 +69,52 @@ public sealed partial class ExitCodeDialog : ContentDialog
                     }
                     catch { }
 
+                    // Clean up all HKCU lockdown policies directly via reg.exe
+                    string[] sysPolicies = { "DisableTaskMgr", "DisableLockWorkstation", "DisableChangePassword" };
+                    string[] expPolicies = { "NoLogoff", "NoRun" };
+
+                    foreach (var val in sysPolicies)
+                    {
+                        try
+                        {
+                            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "reg.exe",
+                                Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v \"{val}\" /f",
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            });
+                            p?.WaitForExit(1000);
+                        }
+                        catch { }
+                    }
+
+                    foreach (var val in expPolicies)
+                    {
+                        try
+                        {
+                            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "reg.exe",
+                                Arguments = $"delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\" /v \"{val}\" /f",
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            });
+                            p?.WaitForExit(1000);
+                        }
+                        catch { }
+                    }
+
                     try
                     {
-                        var regInfo = new System.Diagnostics.ProcessStartInfo
+                        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                         {
                             FileName = "reg.exe",
-                            Arguments = "delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\" /v \"DisableTaskMgr\" /f",
+                            Arguments = "delete \"HKCU\\Software\\Policies\\Microsoft\\Windows\\System\" /v \"DisableCMD\" /f",
                             UseShellExecute = false,
                             CreateNoWindow = true
-                        };
-                        using var regProc = System.Diagnostics.Process.Start(regInfo);
-                        regProc?.WaitForExit(2000);
+                        });
+                        p?.WaitForExit(1000);
                     }
                     catch { }
 
@@ -97,15 +132,25 @@ public sealed partial class ExitCodeDialog : ContentDialog
                     }
                     catch { }
 
-                    using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
-                    key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
-                    key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
+                    try
+                    {
+                        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", writable: true);
+                        key?.DeleteValue("StartupDelayInMSec", throwOnMissingValue: false);
+                        key?.DeleteValue("WaitForIdleState", throwOnMissingValue: false);
 
-                    using var runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
-                    runKey?.DeleteValue("SecureKioskFastLaunch", throwOnMissingValue: false);
+                        using var runKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+                        runKey?.DeleteValue("SecureKioskFastLaunch", throwOnMissingValue: false);
 
-                    using var policyKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System", writable: true);
-                    policyKey?.DeleteValue("DisableTaskMgr", throwOnMissingValue: false);
+                        using var policyKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System", writable: true);
+                        foreach (var val in sysPolicies) policyKey?.DeleteValue(val, throwOnMissingValue: false);
+
+                        using var expKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", writable: true);
+                        foreach (var val in expPolicies) expKey?.DeleteValue(val, throwOnMissingValue: false);
+
+                        using var cmdKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\System", writable: true);
+                        cmdKey?.DeleteValue("DisableCMD", throwOnMissingValue: false);
+                    }
+                    catch { }
                 }
             }
             catch
