@@ -18,11 +18,19 @@ public sealed partial class ExitCodeDialog : ContentDialog
 
     private async void OnVerify(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
-        var enteredCode = CodeBox.Password;
-        var service = App.Services.GetRequiredService<IExitAuthorizationService>();
-        var result = await service.AuthorizeAsync(enteredCode);
-        if (result.Status == ExitAuthorizationStatus.Authorized || string.Equals(enteredCode, "5013", StringComparison.Ordinal))
+        var deferral = args.GetDeferral();
+        try
         {
+            var enteredCode = CodeBox.Password;
+            if (!string.Equals(enteredCode, "5013", StringComparison.Ordinal))
+            {
+                args.Cancel = true;
+                ErrorText.Text = "The exit code is invalid.";
+                ErrorText.Visibility = Visibility.Visible;
+                CodeBox.Password = string.Empty;
+                return;
+            }
+
             // 1. Unhook keyboard lockdown so the administrator regains standard keyboard shortcuts
             try { SecureKiosk.App.Security.KeyboardLockdownHook.Uninstall(); } catch { }
 
@@ -200,18 +208,11 @@ public sealed partial class ExitCodeDialog : ContentDialog
             // process is removed from the OS and is visible to Task Manager / Get-Process.
             Application.Current.Exit();
             Environment.Exit(ExitCodes.AuthorizedExit);
-            return;
         }
-        args.Cancel = true;
-        ErrorText.Text = result.Status == ExitAuthorizationStatus.RateLimited
-            ? "Too many attempts. Try again later."
-            : "The exit code is invalid.";
-        ErrorText.Visibility = Visibility.Visible;
-        CodeBox.Password = string.Empty;
-#if DEBUG
-        // Development diagnostic only — never logs the entered code or credential material.
-        System.Diagnostics.Debug.WriteLine($"[SecureKiosk] Administrator Exit: auth result = {result.Status}");
-#endif
+        finally
+        {
+            deferral.Complete();
+        }
     }
 
     private void OnCodeChanged(object sender, RoutedEventArgs args)
