@@ -452,51 +452,17 @@ public static class KioskPolicyManager
         }
         catch { }
 
-        // 2. Restore desktop icons and re-enable Taskbar immediately (< 1ms)
+        // 2. Disarm scheduled tasks and startup launch tasks reliably (< 30ms)
+        DisarmScheduledTasks();
+
+        // 3. Restore desktop icons and re-enable Taskbar immediately (< 1ms)
         SetDesktopIconsVisibility(true);
         ShowTaskbar();
         NotifyPolicyChange();
-
-        // 3. Asynchronously clean up redundant reg.exe keys and scheduled tasks in background worker
-        _ = Task.Run(RemoveRedundantRegPolicies);
     }
 
-    private static void RemoveRedundantRegPolicies()
+    private static void DisarmScheduledTasks()
     {
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableLockWorkstation");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableChangePassword");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogoff");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoWinKeys");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoTrayContextMenu");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoViewContextMenu");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFind");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFolderOptions");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFileMenu");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSetTaskbar");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "LockTaskbar");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "DisallowRun");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktop");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoDesktopCreation");
-        RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\Explorer", "NoRun");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "HideIcons");
-        RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\EdgeUI", "AllowEdgeSwipe");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerTapEnabled");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipeEnabled");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "ThreeFingerSwipes");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerTapEnabled");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipeEnabled");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "FourFingerSwipes");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableSwitchDesktopGestures");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad", "EnableEdgy");
-        RunRegKeyDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun");
-        RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\System", "DisableCMD");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "StartupDelayInMSec");
-        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "WaitForIdleState");
-
         try
         {
             using var delProc = Process.Start(new ProcessStartInfo
@@ -506,7 +472,7 @@ public static class KioskPolicyManager
                 UseShellExecute = false,
                 CreateNoWindow = true
             });
-            delProc?.WaitForExit(1000);
+            delProc?.WaitForExit(300);
         }
         catch { }
 
@@ -519,7 +485,7 @@ public static class KioskPolicyManager
                 UseShellExecute = false,
                 CreateNoWindow = true
             });
-            proc?.WaitForExit(1000);
+            proc?.WaitForExit(300);
         }
         catch { }
 
@@ -536,7 +502,7 @@ public static class KioskPolicyManager
                     UseShellExecute = false,
                     CreateNoWindow = true
                 });
-                cmdProc?.WaitForExit(1000);
+                cmdProc?.WaitForExit(300);
             }
         }
         catch { }

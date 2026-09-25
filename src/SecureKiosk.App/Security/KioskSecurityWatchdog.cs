@@ -155,6 +155,7 @@ public static class KioskSecurityWatchdog
         // 1. Send WM_CLOSE to top-level application windows belonging to other processes
         try
         {
+            var pidCache = new Dictionary<uint, bool>();
             EnumWindows((hwnd, _) =>
             {
                 try
@@ -162,8 +163,14 @@ public static class KioskSecurityWatchdog
                     GetWindowThreadProcessId(hwnd, out uint pid);
                     if (pid != 0 && pid != (uint)currentPid)
                     {
-                        using var p = Process.GetProcessById((int)pid);
-                        if (!SystemProcessWhitelist.Contains(p.ProcessName))
+                        if (!pidCache.TryGetValue(pid, out bool isWhitelisted))
+                        {
+                            using var p = Process.GetProcessById((int)pid);
+                            isWhitelisted = SystemProcessWhitelist.Contains(p.ProcessName);
+                            pidCache[pid] = isWhitelisted;
+                        }
+
+                        if (!isWhitelisted)
                         {
                             PostMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
                         }

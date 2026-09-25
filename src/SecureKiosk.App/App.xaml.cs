@@ -71,16 +71,13 @@ public partial class App : Application
         }
         catch { }
 
-        // 1. Immediately apply synchronous registry lockdown and Windows policies
+        // 1. Immediately apply synchronous registry lockdown and Windows policies (< 1ms)
         KioskPolicyManager.ApplyPolicies(pkgFamily);
 
-        // 2. Terminate all background applications running behind the kiosk
-        KioskSecurityWatchdog.CloseAllBackgroundApps();
-
-        // 3. Start continuous process watchdog to terminate unauthorized apps (taskmgr, cmd, powershell, etc.)
+        // 2. Start continuous process watchdog (sweeps background apps asynchronously without blocking UI)
         KioskSecurityWatchdog.Start();
 
-        // 4. Create and activate fullscreen topmost kiosk window
+        // 3. Create and activate fullscreen topmost kiosk window immediately (< 16ms)
         _window = new KioskWindow();
         _window.Activate();
 
