@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -10,7 +11,8 @@ namespace SecureKiosk.App.Security;
 /// <summary>
 /// Continuous background security watchdog that monitors and terminates unauthorized administrative
 /// processes (Task Manager, Command Prompt, PowerShell, Windows Terminal, Registry Editor, etc.),
-/// closes any File Explorer or Run dialogs, and ensures the taskbar remains suppressed while SecureKiosk is active.
+/// closes any File Explorer or Run dialogs, terminates any background applications,
+/// and ensures the taskbar remains suppressed while SecureKiosk is active.
 /// </summary>
 public static class KioskSecurityWatchdog
 {
@@ -57,6 +59,14 @@ public static class KioskSecurityWatchdog
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
     private static readonly string[] BlockedProcesses =
     [
         "taskmgr",
@@ -72,9 +82,136 @@ public static class KioskSecurityWatchdog
         "StartMenuExperienceHost"
     ];
 
+    private static readonly HashSet<string> SystemProcessWhitelist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // System and OS Kernel
+        "system",
+        "idle",
+        "registry",
+        "smss",
+        "csrss",
+        "wininit",
+        "services",
+        "lsass",
+        "winlogon",
+
+        // Windows Shell and Desktop Infrastructure
+        "explorer",
+        "dwm",
+        "sihost",
+        "ctfmon",
+        "taskhostw",
+        "RuntimeBroker",
+        "TextInputHost",
+        "fontdrvhost",
+        "ShellExperienceHost",
+        "ApplicationFrameHost",
+        "SystemSettings",
+        "audiodg",
+        "spoolsv",
+        "SecurityHealthSystray",
+        "SecurityHealthService",
+        "smartscreen",
+
+        // Hardware and Driver Helpers
+        "nvcontainer",
+        "NVDisplay.Container",
+        "igfxEM",
+        "igfxHK",
+        "igfxTray",
+        "RtkNGUI64",
+        "RAVCpl64",
+        "SynTPEnh",
+        "SynTPHelper",
+        "ETDCtrl",
+        "ETDService",
+        "ETDControl",
+        "AsusTPCenter",
+        "HControl"
+    };
+
     public static void RegisterKioskWindow(IntPtr hwnd)
     {
         _kioskHwnd = hwnd;
+    }
+
+    /// <summary>
+    /// Closes and terminates all background user applications running in the interactive session,
+    /// ensuring the kiosk runs in a completely clean, dedicated environment.
+    /// </summary>
+    public static void CloseAllBackgroundApps()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+
+        int currentPid = Environment.ProcessId;
+        int currentSession = -1;
+        try
+        {
+            using var currentProc = Process.GetCurrentProcess();
+            currentSession = currentProc.SessionId;
+        }
+        catch { }
+
+        // 1. Send WM_CLOSE to top-level application windows belonging to other processes
+        try
+        {
+            EnumWindows((hwnd, _) =>
+            {
+                try
+                {
+                    GetWindowThreadProcessId(hwnd, out uint pid);
+                    if (pid != 0 && pid != (uint)currentPid)
+                    {
+                        using var p = Process.GetProcessById((int)pid);
+                        if (!SystemProcessWhitelist.Contains(p.ProcessName))
+                        {
+                            PostMessage(hwnd, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+                        }
+                    }
+                }
+                catch { }
+                return true;
+            }, IntPtr.Zero);
+        }
+        catch { }
+
+        // Short pause to give applications a moment to exit cleanly
+        Thread.Sleep(150);
+
+        // 2. Forcibly terminate all remaining non-whitelisted user processes in the session
+        try
+        {
+            var processes = Process.GetProcesses();
+            foreach (var p in processes)
+            {
+                try
+                {
+                    if (p.Id == currentPid || p.Id <= 4)
+                        continue;
+
+                    if (currentSession != -1 && p.SessionId != currentSession)
+                        continue;
+
+                    string name = p.ProcessName;
+                    if (SystemProcessWhitelist.Contains(name))
+                        continue;
+
+                    if (!p.HasExited)
+                    {
+                        p.Kill(entireProcessTree: true);
+                    }
+                }
+                catch
+                {
+                    // Access denied or already exited
+                }
+                finally
+                {
+                    p.Dispose();
+                }
+            }
+        }
+        catch { }
     }
 
     public static void Start()
@@ -85,9 +222,13 @@ public static class KioskSecurityWatchdog
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
+            // Immediately sweep and close all background user apps on startup
+            Task.Run(CloseAllBackgroundApps);
+
             Task.Run(async () =>
             {
                 using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(200));
+                int tickCounter = 0;
                 while (!token.IsCancellationRequested)
                 {
                     try
@@ -97,6 +238,12 @@ public static class KioskSecurityWatchdog
                         CloseRunDialogs();
                         KioskPolicyManager.HideTaskbar();
                         KioskPolicyManager.SetDesktopIconsVisibility(false);
+
+                        // Every ~2 seconds (10 ticks), sweep any newly launched background apps
+                        if (++tickCounter % 10 == 0)
+                        {
+                            CloseAllBackgroundApps();
+                        }
 
                         if (_kioskHwnd != IntPtr.Zero)
                         {
@@ -112,6 +259,21 @@ public static class KioskSecurityWatchdog
                                 var foreground = GetForegroundWindow();
                                 if (foreground != IntPtr.Zero && foreground != _kioskHwnd && GetAncestor(foreground, GA_ROOT) != _kioskHwnd)
                                 {
+                                    // Kill any unauthorized process that stole foreground focus
+                                    GetWindowThreadProcessId(foreground, out uint fgPid);
+                                    if (fgPid != 0 && fgPid != (uint)Environment.ProcessId)
+                                    {
+                                        try
+                                        {
+                                            using var fgProc = Process.GetProcessById((int)fgPid);
+                                            if (!SystemProcessWhitelist.Contains(fgProc.ProcessName))
+                                            {
+                                                fgProc.Kill(entireProcessTree: true);
+                                            }
+                                        }
+                                        catch { }
+                                    }
+
                                     SetWindowPos(_kioskHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
                                     SetForegroundWindow(_kioskHwnd);
                                     SwitchToThisWindow(_kioskHwnd, true);
