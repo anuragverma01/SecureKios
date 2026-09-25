@@ -4,6 +4,7 @@
     Title="Administrator exit"
     PrimaryButtonText="Verify"
     CloseButtonText="Cancel"
+    DefaultButton="Primary"
     PrimaryButtonClick="OnVerify">
     <StackPanel Spacing="12">
         <TextBlock Text="Enter the 4-digit administrator exit code."/>

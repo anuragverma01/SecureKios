@@ -1,5 +1,9 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using SecureKiosk.App.Security;
 using SecureKiosk.App.Windows;
 using SecureKiosk.Core.Interfaces;
 using SecureKiosk.Core.Security;
@@ -60,8 +64,24 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        string? pkgFamily = null;
+        try
+        {
+            pkgFamily = global::Windows.ApplicationModel.Package.Current?.Id?.FamilyName;
+        }
+        catch { }
+
+        // 1. Immediately apply synchronous registry lockdown and Windows policies
+        KioskPolicyManager.ApplyPolicies(pkgFamily);
+
+        // 2. Start continuous process watchdog to terminate unauthorized apps (taskmgr, cmd, powershell, etc.)
+        KioskSecurityWatchdog.Start();
+
+        // 3. Create and activate fullscreen topmost kiosk window
         _window = new KioskWindow();
         _window.Activate();
+
+        // 4. Request UWP startup task enablement in isolated background task
         _ = EnsureStartupTaskEnabledAsync();
     }
 
@@ -74,51 +94,6 @@ public partial class App : Application
                 task.State != global::Windows.ApplicationModel.StartupTaskState.DisabledByPolicy)
             {
                 await task.RequestEnableAsync();
-            }
-
-            // Zero out Windows 10/11 Explorer startup delays so startup tasks launch immediately upon sign-in
-            if (OperatingSystem.IsWindows())
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize");
-                key?.SetValue("StartupDelayInMSec", 0, Microsoft.Win32.RegistryValueKind.DWord);
-                key?.SetValue("WaitForIdleState", 0, Microsoft.Win32.RegistryValueKind.DWord);
-
-                // Fast launch via Run key to execute immediately upon logon without Modern App Lifecycle queue delay
-                try
-                {
-                    var pkgFamily = global::Windows.ApplicationModel.Package.Current?.Id?.FamilyName;
-                    if (!string.IsNullOrEmpty(pkgFamily))
-                    {
-                        using var runKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run");
-                        runKey?.SetValue("SecureKioskFastLaunch", $"explorer.exe shell:AppsFolder\\{pkgFamily}!App");
-                    }
-                }
-                catch { }
-
-                // Lock down Task Manager, Ctrl+Alt+Del, Run, and CMD while kiosk mode is active
-                try
-                {
-                    using var sysKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System");
-                    sysKey?.SetValue("DisableTaskMgr", 1, Microsoft.Win32.RegistryValueKind.DWord);
-                    sysKey?.SetValue("DisableLockWorkstation", 1, Microsoft.Win32.RegistryValueKind.DWord);
-                    sysKey?.SetValue("DisableChangePassword", 1, Microsoft.Win32.RegistryValueKind.DWord);
-                }
-                catch { }
-
-                try
-                {
-                    using var expKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer");
-                    expKey?.SetValue("NoLogoff", 1, Microsoft.Win32.RegistryValueKind.DWord);
-                    expKey?.SetValue("NoRun", 1, Microsoft.Win32.RegistryValueKind.DWord);
-                }
-                catch { }
-
-                try
-                {
-                    using var cmdKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Policies\Microsoft\Windows\System");
-                    cmdKey?.SetValue("DisableCMD", 2, Microsoft.Win32.RegistryValueKind.DWord);
-                }
-                catch { }
             }
         }
         catch

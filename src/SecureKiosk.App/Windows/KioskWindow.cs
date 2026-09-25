@@ -50,6 +50,7 @@ public sealed class KioskWindow : Window
 
         Closed += (_, _) =>
         {
+            KioskSecurityWatchdog.Stop();
             KeyboardLockdownHook.Uninstall();
         };
     }

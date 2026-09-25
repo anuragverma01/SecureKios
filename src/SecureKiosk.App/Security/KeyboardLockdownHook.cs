@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SecureKiosk.App.Security;
@@ -8,7 +9,7 @@ namespace SecureKiosk.App.Security;
 /// - Windows Key (Left &amp; Right) -> blocks Start Menu
 /// - Alt + Tab -> blocks Task Switcher / window switching
 /// - Alt + Esc -> blocks window cycling
-/// - Ctrl + Esc -> blocks Start Menu
+/// - Ctrl + Esc &amp; Ctrl + Shift + Esc -> blocks Start Menu and direct Task Manager shortcut
 /// - Alt + F4 -> blocks application closure
 /// - Alt + Space -> blocks system window menu
 /// - Win + [Key] -> blocks all Windows key shortcuts (Win+D, Win+E, Win+R, Win+X, Win+Tab, etc.)
@@ -25,6 +26,7 @@ public static class KeyboardLockdownHook
     private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12; // Alt
     private const int VK_F4 = 0x73;
+    private const int VK_SHIFT = 0x10;
 
     private const uint LLKHF_ALTDOWN = 0x20;
 
@@ -51,8 +53,27 @@ public static class KeyboardLockdownHook
         {
             if (_hookId == IntPtr.Zero)
             {
-                // For WH_KEYBOARD_LL, hMod must be IntPtr.Zero and dwThreadId must be 0
-                _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, IntPtr.Zero, 0);
+                IntPtr hMod = IntPtr.Zero;
+                try
+                {
+                    using var curProcess = Process.GetCurrentProcess();
+                    using var curModule = curProcess.MainModule;
+                    if (curModule != null)
+                    {
+                        hMod = GetModuleHandle(curModule.ModuleName);
+                    }
+                }
+                catch
+                {
+                    // Fallback
+                }
+
+                if (hMod == IntPtr.Zero)
+                {
+                    hMod = GetModuleHandle(null);
+                }
+
+                _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, hMod, 0);
             }
         }
     }
@@ -103,7 +124,7 @@ public static class KeyboardLockdownHook
                 return (IntPtr)1;
             }
 
-            // 5. Suppress Ctrl+Esc (Start Menu)
+            // 5. Suppress Ctrl+Esc and Ctrl+Shift+Esc (Start Menu / Task Manager)
             if (vk == VK_ESCAPE && isCtrlDown)
             {
                 return (IntPtr)1;
@@ -137,4 +158,7 @@ public static class KeyboardLockdownHook
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
 }
