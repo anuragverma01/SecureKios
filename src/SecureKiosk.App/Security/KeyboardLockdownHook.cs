@@ -12,7 +12,7 @@ namespace SecureKiosk.App.Security;
 /// - Ctrl + Esc &amp; Ctrl + Shift + Esc -> blocks Start Menu and direct Task Manager shortcut
 /// - Alt + F4 -> blocks application closure
 /// - Alt + Space -> blocks system window menu
-/// - Win + [Key] -> blocks all Windows key shortcuts (Win+D, Win+E, Win+R, Win+X, Win+Tab, etc.)
+/// - Win + [Key] -> blocks all Windows key shortcuts (Win+R, Win+E, Win+S, Win+D, Win+X, Win+Tab, etc.)
 /// </summary>
 public static class KeyboardLockdownHook
 {
@@ -46,6 +46,7 @@ public static class KeyboardLockdownHook
     private static readonly LowLevelKeyboardProc _proc = HookCallback;
     private static IntPtr _hookId = IntPtr.Zero;
     private static readonly object _syncLock = new();
+    private static volatile bool _isWinDownState = false;
 
     public static void Install()
     {
@@ -86,6 +87,7 @@ public static class KeyboardLockdownHook
             {
                 UnhookWindowsHookEx(_hookId);
                 _hookId = IntPtr.Zero;
+                _isWinDownState = false;
             }
         }
     }
@@ -96,47 +98,56 @@ public static class KeyboardLockdownHook
         {
             var kbd = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
             uint vk = kbd.vkCode;
-            bool isAltDown = (kbd.flags & LLKHF_ALTDOWN) != 0 || (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
-            bool isCtrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-            bool isWinDown = (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
 
-            // 1. Suppress Windows Keys (Start Menu)
+            // Track Win key state reliably across all down/up messages
             if (vk == VK_LWIN || vk == VK_RWIN)
             {
-                return (IntPtr)1;
+                if (wParam == (IntPtr)0x0100 || wParam == (IntPtr)0x0104) // WM_KEYDOWN, WM_SYSKEYDOWN
+                {
+                    _isWinDownState = true;
+                }
+                else if (wParam == (IntPtr)0x0101 || wParam == (IntPtr)0x0105) // WM_KEYUP, WM_SYSKEYUP
+                {
+                    _isWinDownState = false;
+                }
+                return (IntPtr)1; // Suppress Start Menu trigger
             }
 
-            // 2. Suppress any key pressed while Windows Key is held (Win+Tab, Win+D, Win+R, Win+X, etc.)
+            bool isWinDown = _isWinDownState || (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
+            bool isAltDown = (kbd.flags & LLKHF_ALTDOWN) != 0 || (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+            bool isCtrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+
+            // 1. Suppress all Windows Key shortcuts (Win+R, Win+E, Win+S, Win+D, Win+X, Win+Tab, etc.)
             if (isWinDown)
             {
                 return (IntPtr)1;
             }
 
-            // 3. Suppress Alt+Tab (Task Switcher / window switching)
+            // 2. Suppress Alt+Tab (Task Switcher / window switching)
             if (vk == VK_TAB && isAltDown)
             {
                 return (IntPtr)1;
             }
 
-            // 4. Suppress Alt+Esc (Window switching)
+            // 3. Suppress Alt+Esc (Window switching)
             if (vk == VK_ESCAPE && isAltDown)
             {
                 return (IntPtr)1;
             }
 
-            // 5. Suppress Ctrl+Esc and Ctrl+Shift+Esc (Start Menu / Task Manager)
+            // 4. Suppress Ctrl+Esc and Ctrl+Shift+Esc (Start Menu / Task Manager)
             if (vk == VK_ESCAPE && isCtrlDown)
             {
                 return (IntPtr)1;
             }
 
-            // 6. Suppress Alt+F4 (Closing application)
+            // 5. Suppress Alt+F4 (Closing application)
             if (vk == VK_F4 && isAltDown)
             {
                 return (IntPtr)1;
             }
 
-            // 7. Suppress Alt+Space (Window system menu)
+            // 6. Suppress Alt+Space (Window system menu)
             if (vk == VK_SPACE && isAltDown)
             {
                 return (IntPtr)1;

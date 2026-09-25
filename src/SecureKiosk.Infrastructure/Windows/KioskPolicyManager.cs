@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -5,7 +6,7 @@ using Microsoft.Win32;
 namespace SecureKiosk.Infrastructure.Windows;
 
 /// <summary>
-/// Manages Windows policies, registry lockdowns, and shell behavior for SecureKiosk.
+/// Manages Windows policies, registry lockdowns, taskbar state, and shell behavior for SecureKiosk.
 /// Provides dual-layer application (direct in-process registry manipulation and out-of-process reg.exe calls)
 /// to ensure policies are applied and cleaned up reliably across both packaged and unpackaged environments.
 /// </summary>
@@ -17,11 +18,73 @@ public static class KioskPolicyManager
     private const uint SMTO_ABORTIFHUNG = 0x0002;
     private static readonly IntPtr HWND_BROADCAST = new IntPtr(0xffff);
 
+    private const int SW_HIDE = 0;
+    private const int SW_SHOW = 5;
+
     [DllImport("shell32.dll")]
     private static extern void SHChangeNotify(int wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     private static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnableWindow(IntPtr hWnd, bool bEnable);
+
+    /// <summary>
+    /// Completely hides and disables the Windows Taskbar on all monitors.
+    /// </summary>
+    public static void HideTaskbar()
+    {
+        try
+        {
+            var hTaskbar = FindWindow("Shell_TrayWnd", null);
+            if (hTaskbar != IntPtr.Zero)
+            {
+                ShowWindow(hTaskbar, SW_HIDE);
+                EnableWindow(hTaskbar, false);
+            }
+
+            var hSecondary = FindWindow("Shell_SecondaryTrayWnd", null);
+            if (hSecondary != IntPtr.Zero)
+            {
+                ShowWindow(hSecondary, SW_HIDE);
+                EnableWindow(hSecondary, false);
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Restores and enables the Windows Taskbar on all monitors.
+    /// </summary>
+    public static void ShowTaskbar()
+    {
+        try
+        {
+            var hTaskbar = FindWindow("Shell_TrayWnd", null);
+            if (hTaskbar != IntPtr.Zero)
+            {
+                EnableWindow(hTaskbar, true);
+                ShowWindow(hTaskbar, SW_SHOW);
+            }
+
+            var hSecondary = FindWindow("Shell_SecondaryTrayWnd", null);
+            if (hSecondary != IntPtr.Zero)
+            {
+                EnableWindow(hSecondary, true);
+                ShowWindow(hSecondary, SW_SHOW);
+            }
+        }
+        catch { }
+    }
 
     /// <summary>
     /// Synchronously applies lockdown policies:
@@ -30,6 +93,12 @@ public static class KioskPolicyManager
     /// - Disables Change Password (DisableChangePassword = 1)
     /// - Disables Sign Out (NoLogoff = 1)
     /// - Disables Run dialog (NoRun = 1)
+    /// - Disables Windows hotkeys (NoWinKeys = 1)
+    /// - Disables Taskbar context menu (NoTrayContextMenu = 1)
+    /// - Disables Desktop context menu (NoViewContextMenu = 1)
+    /// - Disables Windows Search / Find (NoFind = 1)
+    /// - Hides Taskbar Search Box (SearchboxTaskbarMode = 0)
+    /// - Hides and disables Taskbar window
     /// - Enforces DisallowRun list (cmd.exe, powershell.exe, pwsh.exe, taskmgr.exe, wt.exe, taskkill.exe, regedit.exe)
     /// - Disables Command Prompt (DisableCMD = 2)
     /// - Minimizes startup delays (StartupDelayInMSec = 0, WaitForIdleState = 0)
@@ -54,7 +123,31 @@ public static class KioskPolicyManager
             using var expKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer");
             expKey?.SetValue("NoLogoff", 1, RegistryValueKind.DWord);
             expKey?.SetValue("NoRun", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoWinKeys", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoTrayContextMenu", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoViewContextMenu", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoFind", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoFolderOptions", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoFileMenu", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("NoSetTaskbar", 1, RegistryValueKind.DWord);
+            expKey?.SetValue("LockTaskbar", 1, RegistryValueKind.DWord);
             expKey?.SetValue("DisallowRun", 1, RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
+            using var polExpKey = Registry.CurrentUser.CreateSubKey(@"Software\Policies\Microsoft\Windows\Explorer");
+            polExpKey?.SetValue("NoRun", 1, RegistryValueKind.DWord);
+            polExpKey?.SetValue("DisableSearchBoxSuggestions", 1, RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
+            using var searchKey = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Search");
+            searchKey?.SetValue("SearchboxTaskbarMode", 0, RegistryValueKind.DWord);
+            searchKey?.SetValue("BingSearchEnabled", 0, RegistryValueKind.DWord);
         }
         catch { }
 
@@ -102,7 +195,17 @@ public static class KioskPolicyManager
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableChangePassword", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogoff", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoWinKeys", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoTrayContextMenu", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoViewContextMenu", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFind", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFolderOptions", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFileMenu", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSetTaskbar", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "LockTaskbar", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "DisallowRun", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Policies\Microsoft\Windows\Explorer", "NoRun", "REG_DWORD", "1");
+        RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode", "REG_DWORD", "0");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "1", "REG_SZ", "taskmgr.exe");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "2", "REG_SZ", "cmd.exe");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun", "3", "REG_SZ", "powershell.exe");
@@ -117,11 +220,14 @@ public static class KioskPolicyManager
             RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch", "REG_SZ", $"explorer.exe shell:AppsFolder\\{packageFamilyName}!App");
         }
 
+        // 3. Immediately hide and disable Taskbar
+        HideTaskbar();
+
         NotifyPolicyChange();
     }
 
     /// <summary>
-    /// Completely restores Windows policies and removes kiosk restrictions upon authorized administrator exit.
+    /// Completely restores Windows policies, re-enables Taskbar, and removes kiosk restrictions upon authorized administrator exit.
     /// </summary>
     public static void RemovePolicies()
     {
@@ -147,8 +253,32 @@ public static class KioskPolicyManager
             {
                 expKey.DeleteValue("NoLogoff", throwOnMissingValue: false);
                 expKey.DeleteValue("NoRun", throwOnMissingValue: false);
+                expKey.DeleteValue("NoWinKeys", throwOnMissingValue: false);
+                expKey.DeleteValue("NoTrayContextMenu", throwOnMissingValue: false);
+                expKey.DeleteValue("NoViewContextMenu", throwOnMissingValue: false);
+                expKey.DeleteValue("NoFind", throwOnMissingValue: false);
+                expKey.DeleteValue("NoFolderOptions", throwOnMissingValue: false);
+                expKey.DeleteValue("NoFileMenu", throwOnMissingValue: false);
+                expKey.DeleteValue("NoSetTaskbar", throwOnMissingValue: false);
+                expKey.DeleteValue("LockTaskbar", throwOnMissingValue: false);
                 expKey.DeleteValue("DisallowRun", throwOnMissingValue: false);
             }
+        }
+        catch { }
+
+        try
+        {
+            using var polExpKey = Registry.CurrentUser.OpenSubKey(@"Software\Policies\Microsoft\Windows\Explorer", writable: true);
+            polExpKey?.DeleteValue("NoRun", throwOnMissingValue: false);
+            polExpKey?.DeleteValue("DisableSearchBoxSuggestions", throwOnMissingValue: false);
+        }
+        catch { }
+
+        try
+        {
+            using var searchKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Search", writable: true);
+            searchKey?.DeleteValue("SearchboxTaskbarMode", throwOnMissingValue: false);
+            searchKey?.DeleteValue("BingSearchEnabled", throwOnMissingValue: false);
         }
         catch { }
 
@@ -189,7 +319,17 @@ public static class KioskPolicyManager
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableChangePassword");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogoff");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoWinKeys");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoTrayContextMenu");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoViewContextMenu");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFind");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFolderOptions");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoFileMenu");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSetTaskbar");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "LockTaskbar");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "DisallowRun");
+        RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\Explorer", "NoRun");
+        RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Search", "SearchboxTaskbarMode");
         RunRegKeyDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun");
         RunRegDelete(@"HKCU\Software\Policies\Microsoft\Windows\System", "DisableCMD");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch");
@@ -242,7 +382,10 @@ public static class KioskPolicyManager
         }
         catch { }
 
-        // 5. Notify Windows Shell and system to refresh policies immediately
+        // 5. Restore and re-enable Taskbar
+        ShowTaskbar();
+
+        // 6. Notify Windows Shell and system to refresh policies immediately
         NotifyPolicyChange();
     }
 
