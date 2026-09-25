@@ -190,8 +190,16 @@ jobs:
           $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
           $setupExe = Join-Path $artifactDir 'SecureKiosk_Setup.exe'
           if (Test-Path $setupExe) {
-            signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /s My $setupExe
-            Write-Host "SecureKiosk_Setup.exe signed with publisher: Anurag"
+            Write-Host "Signing SecureKiosk_Setup.exe with certificate $($cert.Thumbprint)..."
+            signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /s My /d "SecureKiosk" $setupExe
+            if ($LASTEXITCODE -ne 0) {
+              signtool.exe sign /fd SHA256 /sha1 $cert.Thumbprint /sm /s My /d "SecureKiosk" $setupExe
+            }
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool failed to sign SecureKiosk_Setup.exe with exit code $LASTEXITCODE"
+            }
+            signtool.exe verify /pa /v $setupExe
+            Write-Host "SecureKiosk_Setup.exe successfully signed and verified with publisher: Anurag"
           }
 
       - name: Upload SecureKiosk Setup
