@@ -24,6 +24,9 @@ public sealed partial class ExitCodeDialog : ContentDialog
         var result = await service.AuthorizeAsync(CodeBox.Password);
         if (result.Status == ExitAuthorizationStatus.Authorized)
         {
+            // Unhook keyboard lockdown so the administrator regains standard keyboard shortcuts
+            SecureKiosk.App.Security.KeyboardLockdownHook.Uninstall();
+
             // Disarm startup task so the app does NOT reopen on restart/power off
             // after an authorized administrator exit.
             try
