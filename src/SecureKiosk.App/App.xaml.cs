@@ -95,22 +95,30 @@ public partial class App : Application
                 }
                 catch { }
 
+                // Lock down Task Manager, Ctrl+Alt+Del, Run, and CMD while kiosk mode is active
                 try
                 {
-                    var enableInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = "schtasks.exe",
-                        Arguments = "/change /tn \"SecureKioskInstantLaunch\" /enable",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-                    using var proc = System.Diagnostics.Process.Start(enableInfo);
+                    using var sysKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System");
+                    sysKey?.SetValue("DisableTaskMgr", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                    sysKey?.SetValue("DisableLockWorkstation", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                    sysKey?.SetValue("DisableChangePassword", 1, Microsoft.Win32.RegistryValueKind.DWord);
                 }
                 catch { }
 
-                // Block Task Manager while kiosk mode is active so users cannot terminate the app
-                using var policyKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\System");
-                policyKey?.SetValue("DisableTaskMgr", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                try
+                {
+                    using var expKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer");
+                    expKey?.SetValue("NoLogoff", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                    expKey?.SetValue("NoRun", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                }
+                catch { }
+
+                try
+                {
+                    using var cmdKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Policies\Microsoft\Windows\System");
+                    cmdKey?.SetValue("DisableCMD", 2, Microsoft.Win32.RegistryValueKind.DWord);
+                }
+                catch { }
             }
         }
         catch
