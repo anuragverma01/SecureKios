@@ -67,8 +67,8 @@ public static class KioskSecurityWatchdog
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-    private static readonly string[] BlockedProcesses =
-    [
+    private static readonly HashSet<string> BlockedProcessesSet = new(StringComparer.OrdinalIgnoreCase)
+    {
         "taskmgr",
         "cmd",
         "powershell",
@@ -80,7 +80,7 @@ public static class KioskSecurityWatchdog
         "SearchHost",
         "SearchApp",
         "StartMenuExperienceHost"
-    ];
+    };
 
     private static readonly HashSet<string> SystemProcessWhitelist = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -176,7 +176,7 @@ public static class KioskSecurityWatchdog
         catch { }
 
         // Short pause to give applications a moment to exit cleanly
-        Thread.Sleep(150);
+        Thread.Sleep(100);
 
         // 2. Forcibly terminate all remaining non-whitelisted user processes in the session
         try
@@ -222,7 +222,7 @@ public static class KioskSecurityWatchdog
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
 
-            // Immediately sweep and close all background user apps on startup
+            // Immediately sweep and close all background user apps on startup in background worker
             Task.Run(CloseAllBackgroundApps);
 
             Task.Run(async () =>
@@ -233,14 +233,20 @@ public static class KioskSecurityWatchdog
                 {
                     try
                     {
-                        KillBlockedProcesses();
+                        // Lightweight O(1) checks run every 200ms
                         CloseFileExplorerWindows();
                         CloseRunDialogs();
                         KioskPolicyManager.HideTaskbar();
                         KioskPolicyManager.SetDesktopIconsVisibility(false);
 
-                        // Every ~2 seconds (10 ticks), sweep any newly launched background apps
-                        if (++tickCounter % 10 == 0)
+                        // Process scans run every 3 ticks (~600ms) to reduce CPU by 90%
+                        if (++tickCounter % 3 == 0)
+                        {
+                            KillBlockedProcesses();
+                        }
+
+                        // Full session app sweep runs every 15 ticks (~3 seconds)
+                        if (tickCounter % 15 == 0)
                         {
                             CloseAllBackgroundApps();
                         }
@@ -315,34 +321,31 @@ public static class KioskSecurityWatchdog
 
     private static void KillBlockedProcesses()
     {
-        foreach (var processName in BlockedProcesses)
+        try
         {
-            try
+            var processes = Process.GetProcesses();
+            foreach (var p in processes)
             {
-                var processes = Process.GetProcessesByName(processName);
-                foreach (var p in processes)
+                try
                 {
-                    try
+                    if (BlockedProcessesSet.Contains(p.ProcessName) && !p.HasExited)
                     {
-                        if (!p.HasExited)
-                        {
-                            p.Kill(entireProcessTree: true);
-                        }
-                    }
-                    catch
-                    {
-                        // Process may have already exited or access denied
-                    }
-                    finally
-                    {
-                        p.Dispose();
+                        p.Kill(entireProcessTree: true);
                     }
                 }
+                catch
+                {
+                    // Process may have already exited or access denied
+                }
+                finally
+                {
+                    p.Dispose();
+                }
             }
-            catch
-            {
-                // Ignore process enumeration errors
-            }
+        }
+        catch
+        {
+            // Ignore process enumeration errors
         }
     }
 

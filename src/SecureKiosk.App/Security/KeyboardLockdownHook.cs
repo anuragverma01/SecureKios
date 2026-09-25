@@ -96,8 +96,9 @@ public static class KeyboardLockdownHook
     {
         if (nCode >= 0)
         {
-            var kbd = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            uint vk = kbd.vkCode;
+            // Zero-allocation field reads directly from unmanaged lParam struct memory
+            uint vk = (uint)Marshal.ReadInt32(lParam, 0);      // vkCode offset 0
+            uint flags = (uint)Marshal.ReadInt32(lParam, 8);   // flags offset 8
 
             // Track Win key state reliably across all down/up messages
             if (vk == VK_LWIN || vk == VK_RWIN)
@@ -114,7 +115,7 @@ public static class KeyboardLockdownHook
             }
 
             bool isWinDown = _isWinDownState || (GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0;
-            bool isAltDown = (kbd.flags & LLKHF_ALTDOWN) != 0 || (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
+            bool isAltDown = (flags & LLKHF_ALTDOWN) != 0 || (GetAsyncKeyState(VK_MENU) & 0x8000) != 0;
             bool isCtrlDown = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
 
             // 1. Suppress all Windows Key shortcuts (Win+R, Win+E, Win+S, Win+D, Win+X, Win+Tab, etc.)

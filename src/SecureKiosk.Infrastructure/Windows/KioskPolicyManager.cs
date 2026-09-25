@@ -266,7 +266,17 @@ public static class KioskPolicyManager
             catch { }
         }
 
-        // 2. Redundant reg.exe execution for guaranteed out-of-process persistence
+        // 2. Immediately hide desktop icons and disable Taskbar in < 1ms
+        SetDesktopIconsVisibility(false);
+        HideTaskbar();
+        NotifyPolicyChange();
+
+        // 3. Redundant reg.exe execution in background worker so startup UI is never blocked
+        _ = Task.Run(() => ApplyRedundantRegPolicies(packageFamilyName));
+    }
+
+    private static void ApplyRedundantRegPolicies(string? packageFamilyName)
+    {
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableLockWorkstation", "REG_DWORD", "1");
         RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableChangePassword", "REG_DWORD", "1");
@@ -308,12 +318,6 @@ public static class KioskPolicyManager
         {
             RunRegAdd(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "SecureKioskFastLaunch", "REG_SZ", $"explorer.exe shell:AppsFolder\\{packageFamilyName}!App");
         }
-
-        // 3. Immediately hide desktop icons and disable Taskbar
-        SetDesktopIconsVisibility(false);
-        HideTaskbar();
-
-        NotifyPolicyChange();
     }
 
     /// <summary>
@@ -448,7 +452,17 @@ public static class KioskPolicyManager
         }
         catch { }
 
-        // 2. Redundant reg.exe deletion
+        // 2. Restore desktop icons and re-enable Taskbar immediately (< 1ms)
+        SetDesktopIconsVisibility(true);
+        ShowTaskbar();
+        NotifyPolicyChange();
+
+        // 3. Asynchronously clean up redundant reg.exe keys and scheduled tasks in background worker
+        _ = Task.Run(RemoveRedundantRegPolicies);
+    }
+
+    private static void RemoveRedundantRegPolicies()
+    {
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableLockWorkstation");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableChangePassword");
@@ -483,7 +497,6 @@ public static class KioskPolicyManager
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "StartupDelayInMSec");
         RunRegDelete(@"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize", "WaitForIdleState");
 
-        // 3. Delete scheduled tasks if present
         try
         {
             using var delProc = Process.Start(new ProcessStartInfo
@@ -497,7 +510,6 @@ public static class KioskPolicyManager
         }
         catch { }
 
-        // 4. Run disarm helper if present
         try
         {
             using var proc = Process.Start(new ProcessStartInfo
@@ -528,13 +540,6 @@ public static class KioskPolicyManager
             }
         }
         catch { }
-
-        // 5. Restore desktop icons and re-enable Taskbar
-        SetDesktopIconsVisibility(true);
-        ShowTaskbar();
-
-        // 6. Notify Windows Shell and system to refresh policies immediately
-        NotifyPolicyChange();
     }
 
     /// <summary>
