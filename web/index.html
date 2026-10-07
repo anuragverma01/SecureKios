@@ -355,13 +355,7 @@
     }
 
     function openInstallationScreen() {
-      // 1. Try invoking Windows App Installer protocol from browser
-      const appInstallerUri = "ms-appinstaller:?source=https://anuragverma01.github.io/SecureKios/web/SecureKiosk.appinstaller";
-      try {
-        window.location.href = appInstallerUri;
-      } catch (e) {}
-
-      // 2. Open the installation screen directly in the browser
+      // Open the installation consent screen directly
       document.getElementById("installModal").style.display = "flex";
     }
 
@@ -374,16 +368,16 @@
       const modal = document.querySelector(".modal-card");
       modal.innerHTML = `
         <div style="text-align: center; padding: 20px;">
-          <div style="font-size: 36px; margin-bottom: 12px;">🔒</div>
-          <h3 style="font-size: 18px; font-weight: 800; color: #10b981; margin-bottom: 6px;">Installing SecureKiosk...</h3>
-          <p style="font-size: 13px; color: #94a3b8;">Configuring lock screen & policies. App will launch automatically.</p>
+          <div style="font-size: 40px; margin-bottom: 12px;">🚀</div>
+          <h3 style="font-size: 18px; font-weight: 800; color: #10b981; margin-bottom: 8px;">Installation Approved!</h3>
+          <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 16px;">
+            Now click <b>SecureKiosk_Setup.exe</b> in the top-right corner of your browser to activate lockdown.
+          </p>
+          <div style="background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 10px; padding: 10px; font-size: 12px; color: #60a5fa;">
+            👆 Look at the top-right download tray in Chrome
+          </div>
         </div>
       `;
-      setTimeout(() => {
-        // Trigger launch/install
-        window.location.href = "https://github.com/anuragverma01/SecureKios/releases/latest/download/SecureKiosk_Setup.exe";
-        setTimeout(() => closeModal(), 1500);
-      }, 1000);
     }
   </script>
 </body>
