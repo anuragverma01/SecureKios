@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureKiosk — Download & Install</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #151f32;
+      --border: #22324e;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glow */
+    .glow {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, rgba(11, 17, 32, 0) 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 540px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 32px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .author {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    p.desc {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      font-size: 17px;
+      font-weight: 700;
+      padding: 16px 36px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+      transition: all 0.2s ease;
+    }
+    .btn-download:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(59, 130, 246, 0.6);
+    }
+
+    .specs {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      margin-top: 22px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Guided Overlay when download is triggered */
+    .overlay-guide {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 17, 32, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .overlay-guide.active {
+      display: flex;
+    }
+
+    /* Top-Right Arrow pointing at Chrome Download Shelf */
+    .pointer-arrow {
+      position: fixed;
+      top: 20px;
+      right: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      animation: floatArrow 1.5s ease-in-out infinite alternate;
+    }
+    .pointer-arrow .arrow-text {
+      background: #ef4444;
+      color: white;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 8px 16px;
+      border-radius: 30px;
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+      margin-bottom: 8px;
+      white-space: nowrap;
+    }
+    .pointer-arrow .icon-arrow {
+      font-size: 38px;
+      line-height: 1;
+      transform: rotate(45deg);
+      color: #ef4444;
+      filter: drop-shadow(0 2px 8px rgba(239, 68, 68, 0.8));
+    }
+
+    @keyframes floatArrow {
+      0% { transform: translateY(0px) translateX(0px); }
+      100% { transform: translateY(-12px) translateX(6px); }
+    }
+
+    .guide-card {
+      background: var(--card);
+      border: 2px solid #3b82f6;
+      border-radius: 20px;
+      padding: 36px 30px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: left;
+      margin: 24px 0;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .step-number {
+      background: var(--primary);
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .step-content {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .step-content span {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="container">
+    <div class="badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Official Lockdown Edition
+    </div>
+
+    <h1>SecureKiosk</h1>
+    <p class="author">Managed by Anurag</p>
+    <p class="desc">
+      Dedicated Windows kiosk system. Locks down File Explorer, Win+R, gestures, and background applications into a clean security environment.
+    </p>
+
+    <button id="downloadBtn" class="btn-download" onclick="startDownloadFlow()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download & Install SecureKiosk
+    </button>
+
+    <div class="specs">
+      <span>✓ Windows 10 & 11</span>
+      <span>•</span>
+      <span>✓ 100% Free ($0)</span>
+      <span>•</span>
+      <span>✓ Passcode: 5013</span>
+    </div>
+  </div>
+
+  <!-- Guided Overlay after clicking download -->
+  <div id="guideOverlay" class="overlay-guide">
+    <div class="pointer-arrow">
+      <div class="arrow-text">1. CLICK HERE IN CHROME ↗</div>
+      <div class="icon-arrow">➔</div>
+    </div>
+
+    <div class="guide-card">
+      <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Your Download is Ready!</h2>
+      <p style="color: var(--text-muted); font-size: 14px;">No need to open any folders. Follow these 2 easy steps:</p>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            Click the download in your browser
+            <span>Look at the top-right corner of Chrome ↗</span>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            The Install Screen will open on your monitor
+            <span>Click "Install" to start SecureKiosk immediately</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-secondary" onclick="closeGuide()">Done / Back to page</button>
+    </div>
+  </div>
+
+  <script>
+    function startDownloadFlow() {
+      // Trigger the real download URL (GitHub releases latest SecureKiosk_Setup.exe)
+      const downloadUrl = "https://github.com/anuragverma01/SecureKios/releases/latest/download/SecureKiosk_Setup.exe";
+      
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", "SecureKiosk_Setup.exe");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show the visual guide overlay with the big arrow pointing to Chrome's download shelf
+      document.getElementById("guideOverlay").classList.add("active");
+    }
+
+    function closeGuide() {
+      document.getElementById("guideOverlay").classList.remove("active");
+    }
+  </script>
+</body>
+</html>
