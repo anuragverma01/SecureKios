@@ -1,23 +1,236 @@
-<Page x:Class="SecureKiosk.App.Pages.MainPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Background="#0B1220" Padding="48">
-        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="24">
-            <TextBlock Text="Managed by Anurag" Foreground="White" FontSize="44" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center"/>
+<Page
+    x:Class="SecureKiosk.App.Pages.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="#080808">
 
-            <StackPanel Spacing="6" HorizontalAlignment="Center">
-                <TextBlock Text="This system is in lockdown." Foreground="#94A3B8" FontSize="20" HorizontalAlignment="Center" TextAlignment="Center"/>
-                <TextBlock Text="You can’t break it." Foreground="#F1F5F9" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="48"/>
+        </Grid.RowDefinitions>
+
+        <!-- Security-style navigation background -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="310"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0"
+                        Background="#050505"
+                        Padding="22,20"
+                        Spacing="25">
+                <TextBlock Text="Security Center"
+                           Foreground="White"
+                           FontSize="22"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="←"
+                           Foreground="#D8D8D8"
+                           FontSize="28"/>
+                <TextBlock Text="⌂   Home" Foreground="White" FontSize="19"/>
+                <TextBlock Text="◇   Virus &amp; threat protection"
+                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
+                <TextBlock Text="♙   Account protection"
+                           Foreground="White" FontSize="18"/>
+                <TextBlock Text="⌁   Firewall &amp; network protection"
+                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
+                <TextBlock Text="▣   App &amp; browser control"
+                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
+                <Border Background="#252525" Padding="10,12" CornerRadius="4">
+                    <TextBlock Text="▱   Device security"
+                               Foreground="White" FontSize="18"/>
+                </Border>
+                <TextBlock Text="♡   Device performance &amp; health"
+                           Foreground="White" FontSize="17" TextWrapping="Wrap"/>
+                <TextBlock Text="◉   Family options" Foreground="White" FontSize="18"/>
+                <TextBlock Text="◷   Protection history" Foreground="White" FontSize="18"/>
             </StackPanel>
 
-            <StackPanel Spacing="6" HorizontalAlignment="Center">
-                <TextBlock Text="Think you can break it?" Foreground="#94A3B8" FontSize="20" HorizontalAlignment="Center" TextAlignment="Center"/>
-                <TextBlock Text="Go ahead. Try." Foreground="#38BDF8" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center" TextAlignment="Center"/>
-            </StackPanel>
+            <Grid Grid.Column="1" Padding="36">
+                <StackPanel Spacing="22">
+                    <TextBlock Text="Device security"
+                               Foreground="White" FontSize="30"/>
+                    <TextBlock Text="Review device security settings and status."
+                               Foreground="#D0D0D0" FontSize="17"/>
+                    <Border Background="#171717" Padding="22" CornerRadius="6">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Security awareness demo"
+                                       Foreground="White" FontSize="22"/>
+                            <TextBlock
+                                Text="This screen is a local kiosk UI demonstration. It does not represent an actual Windows security alert."
+                                Foreground="#CCCCCC" FontSize="15"
+                                TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Grid>
 
-            <ProgressRing IsActive="{Binding IsBusy}" Visibility="{Binding BusyVisibility}" Width="32" Height="32" HorizontalAlignment="Center"/>
-        </StackPanel>
-        <Button Grid.Row="1" Content="Administrator exit" Command="{Binding ShowExitCommand}" HorizontalAlignment="Right" Padding="18,10"/>
+        <!-- Footer -->
+        <Border Grid.Row="1" Background="#15529B" Padding="12">
+            <TextBlock Text="SECURITY AWARENESS DEMO  •  No real security incident detected"
+                       Foreground="White" FontSize="15"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Dim background, leaving the overlay interactive -->
+        <Grid Grid.RowSpan="2" Background="#99000000" IsHitTestVisible="False"/>
+
+        <!-- Rear scan-style window -->
+        <Border Grid.Row="0"
+                Width="860" Height="620"
+                MaxWidth="90%" MaxHeight="78%"
+                Background="#AFAFAF"
+                Padding="16"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Margin="0,65,0,0"
+                IsHitTestVisible="False">
+            <Border Background="White" BorderBrush="#888888" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="54"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="150"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="◎  Scan"
+                                   Foreground="#222222" FontSize="18"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                   Margin="16,0"/>
+                        <Border Grid.Column="1" Background="#15529B">
+                            <TextBlock Text="Security Scan Demo" Foreground="White"
+                                       FontSize="17" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Grid.Column="2" Text="—   □   ×"
+                                   Foreground="#C35C85" FontSize="18"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Grid Grid.Row="1" Padding="24">
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom" Spacing="14">
+                            <Button Content="Cancel" IsEnabled="False" Width="100"/>
+                            <Button Content="OK" IsEnabled="False" Width="100"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- Main foreground window -->
+        <Border Grid.Row="0"
+                Width="650" Height="455"
+                MaxWidth="88%" MaxHeight="72%"
+                Background="#F7F7F7"
+                BorderBrush="#777777"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Margin="0,70,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="70"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Padding="24,10">
+                    <StackPanel Orientation="Horizontal" Spacing="12"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="◆" Foreground="#1685CF" FontSize="30"/>
+                        <TextBlock Text="Security Demo"
+                                   Foreground="#222222" FontSize="20"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+                    <TextBlock Text="—   □   ×" Foreground="#C35C85"
+                               FontSize="20" HorizontalAlignment="Right"
+                               VerticalAlignment="Center"/>
+                </Grid>
+
+                <Border Grid.Row="1" Background="#303030" Padding="28">
+                    <StackPanel Spacing="16">
+                        <TextBlock Text="Administrator exit"
+                                   Foreground="White" FontSize="23"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock
+                            Text="Enter the administrator exit code to close kiosk mode."
+                            Foreground="#D0D0D0" FontSize="14"
+                            TextAlignment="Center" TextWrapping="Wrap"/>
+
+                        <PasswordBox x:Name="MainExitCodeBox"
+                                     PlaceholderText="Password"
+                                     PasswordRevealMode="Hidden"
+                                     MaxLength="4"
+                                     InputScope="NumericPin"
+                                     Height="52"
+                                     Background="#252525"
+                                     Foreground="White"
+                                     BorderBrush="#AAAAAA"
+                                     BorderThickness="1"
+                                     Padding="12,8"/>
+
+                        <TextBlock x:Name="MainExitErrorText"
+                                   Foreground="#FF8A8A"
+                                   Visibility="Collapsed"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+
+                        <Button Content="Submit"
+                                Width="200" Height="60"
+                                HorizontalAlignment="Center"
+                                Click="OnMainExitSubmit"/>
+
+                        <TextBlock
+                            Text="Local kiosk demo • Code entry is processed on this device."
+                            Foreground="#AAAAAA" FontSize="12"
+                            TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Top warning card, deliberately labeled as a demo -->
+        <Border Grid.Row="0"
+                Width="940" Height="148"
+                MaxWidth="92%"
+                Background="#000000"
+                BorderBrush="#777777"
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="16"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Security Awareness Demonstration"
+                           Foreground="White" FontSize="18"
+                           TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock
+                    Text="Unexpected security warnings, urgent threats, and unsolicited support instructions can be signs of a scam. Verify alerts through trusted channels."
+                    Foreground="#EEEEEE" FontSize="15"
+                    TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="DEMO — No real security incident"
+                           Foreground="White" FontSize="15"
+                           FontWeight="Bold" TextAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Keep the existing Administrator exit command available too -->
+        <Button Grid.Row="0"
+                Content="Administrator exit"
+                Command="{Binding ShowExitCommand}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,20,20"
+                Padding="18,10"
+                IsTabStop="True"/>
     </Grid>
 </Page>
