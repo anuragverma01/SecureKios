@@ -4,17 +4,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Background="#080808">
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="48"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="48" />
         </Grid.RowDefinitions>
 
-        <!-- Security-style navigation background -->
+        <!-- Background security-style dashboard -->
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="310"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="310" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0"
@@ -24,213 +24,182 @@
                 <TextBlock Text="Security Center"
                            Foreground="White"
                            FontSize="22"
-                           FontWeight="SemiBold"/>
-                <TextBlock Text="←"
-                           Foreground="#D8D8D8"
-                           FontSize="28"/>
-                <TextBlock Text="⌂   Home" Foreground="White" FontSize="19"/>
+                           FontWeight="SemiBold" />
+                <TextBlock Text="←" Foreground="#D8D8D8" FontSize="28" />
+                <TextBlock Text="⌂   Home" Foreground="White" FontSize="19" />
                 <TextBlock Text="◇   Virus &amp; threat protection"
-                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
-                <TextBlock Text="♙   Account protection"
-                           Foreground="White" FontSize="18"/>
+                           Foreground="White" FontSize="18" TextWrapping="Wrap" />
+                <TextBlock Text="♙   Account protection" Foreground="White" FontSize="18" />
                 <TextBlock Text="⌁   Firewall &amp; network protection"
-                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
+                           Foreground="White" FontSize="18" TextWrapping="Wrap" />
                 <TextBlock Text="▣   App &amp; browser control"
-                           Foreground="White" FontSize="18" TextWrapping="Wrap"/>
+                           Foreground="White" FontSize="18" TextWrapping="Wrap" />
                 <Border Background="#252525" Padding="10,12" CornerRadius="4">
-                    <TextBlock Text="▱   Device security"
-                               Foreground="White" FontSize="18"/>
+                    <TextBlock Text="▱   Device security" Foreground="White" FontSize="18" />
                 </Border>
                 <TextBlock Text="♡   Device performance &amp; health"
-                           Foreground="White" FontSize="17" TextWrapping="Wrap"/>
-                <TextBlock Text="◉   Family options" Foreground="White" FontSize="18"/>
-                <TextBlock Text="◷   Protection history" Foreground="White" FontSize="18"/>
+                           Foreground="White" FontSize="17" TextWrapping="Wrap" />
+                <TextBlock Text="◉   Family options" Foreground="White" FontSize="18" />
+                <TextBlock Text="◷   Protection history" Foreground="White" FontSize="18" />
             </StackPanel>
 
             <Grid Grid.Column="1" Padding="36">
                 <StackPanel Spacing="22">
-                    <TextBlock Text="Device security"
-                               Foreground="White" FontSize="30"/>
+                    <TextBlock Text="Device security" Foreground="White" FontSize="30" />
                     <TextBlock Text="Review device security settings and status."
-                               Foreground="#D0D0D0" FontSize="17"/>
+                               Foreground="#D0D0D0" FontSize="17" />
                     <Border Background="#171717" Padding="22" CornerRadius="6">
                         <StackPanel Spacing="12">
-                            <TextBlock Text="Security awareness demo"
-                                       Foreground="White" FontSize="22"/>
-                            <TextBlock
-                                Text="This screen is a local kiosk UI demonstration. It does not represent an actual Windows security alert."
-                                Foreground="#CCCCCC" FontSize="15"
-                                TextWrapping="Wrap"/>
+                            <TextBlock Text="Security awareness demo" Foreground="White" FontSize="22" />
+                            <TextBlock Text="This screen is a local kiosk UI demonstration. It does not represent an actual Windows security alert."
+                                       Foreground="#CCCCCC" FontSize="15" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </Grid>
         </Grid>
 
-        <!-- Footer -->
+        <!-- Footer banner -->
         <Border Grid.Row="1" Background="#15529B" Padding="12">
             <TextBlock Text="SECURITY AWARENESS DEMO  •  No real security incident detected"
                        Foreground="White" FontSize="15"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
 
-        <!-- Dim background, leaving the overlay interactive -->
-        <Grid Grid.RowSpan="2" Background="#99000000" IsHitTestVisible="False"/>
+        <!-- Dim the dashboard only. This layer never intercepts mouse input. -->
+        <Grid Grid.RowSpan="2" Background="#99000000" IsHitTestVisible="False" />
 
-        <!-- Rear scan-style window -->
+        <!-- Rear window: approximate scan panel -->
         <Border Grid.Row="0"
-                Width="860" Height="620"
-                MaxWidth="90%" MaxHeight="78%"
-                Background="#AFAFAF"
-                Padding="16"
+                Width="850" Height="550"
+                Background="#B5B5B5"
+                Padding="14"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Margin="0,65,0,0"
+                Margin="0,34,0,0"
                 IsHitTestVisible="False">
             <Border Background="White" BorderBrush="#888888" BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="54"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="54" />
+                        <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="180"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="150" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="◎  Scan"
-                                   Foreground="#222222" FontSize="18"
-                                   FontWeight="SemiBold" VerticalAlignment="Center"
-                                   Margin="16,0"/>
+                        <TextBlock Grid.Column="0" Text="◎  Scan" Foreground="#222222"
+                                   FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0" />
                         <Border Grid.Column="1" Background="#15529B">
-                            <TextBlock Text="Security Scan Demo" Foreground="White"
-                                       FontSize="17" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="Security Scan Demo" Foreground="White" FontSize="17"
+                                       FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <TextBlock Grid.Column="2" Text="—   □   ×"
-                                   Foreground="#C35C85" FontSize="18"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="—   □   ×" Foreground="#C35C85"
+                                   FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <Grid Grid.Row="1" Padding="24">
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Center"
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                                     VerticalAlignment="Bottom" Spacing="14">
-                            <Button Content="Cancel" IsEnabled="False" Width="100"/>
-                            <Button Content="OK" IsEnabled="False" Width="100"/>
+                            <Button Content="Cancel" IsEnabled="False" Width="100" />
+                            <Button Content="OK" IsEnabled="False" Width="100" />
                         </StackPanel>
                     </Grid>
                 </Grid>
             </Border>
         </Border>
 
-        <!-- Main foreground window -->
+        <!-- Foreground dialog. Fixed widths are intentional: percentage values are not valid WinUI Width values. -->
         <Border Grid.Row="0"
-                Width="650" Height="455"
-                MaxWidth="88%" MaxHeight="72%"
+                Width="650" Height="430"
                 Background="#F7F7F7"
-                BorderBrush="#777777"
-                BorderThickness="1"
-                CornerRadius="10"
-                Padding="1"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Margin="0,70,0,0">
+                BorderBrush="#777777" BorderThickness="1"
+                CornerRadius="10" Padding="1"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                Margin="0,58,0,0">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="70"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="70" />
+                    <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0" Padding="24,10">
-                    <StackPanel Orientation="Horizontal" Spacing="12"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="◆" Foreground="#1685CF" FontSize="30"/>
-                        <TextBlock Text="Security Demo"
-                                   Foreground="#222222" FontSize="20"
-                                   FontWeight="SemiBold"/>
+                <Grid Grid.Row="0" Padding="24,10" Background="#FFFFFF">
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="◆" Foreground="#1685CF" FontSize="30" />
+                        <TextBlock Text="Security Demo" Foreground="#222222"
+                                   FontSize="20" FontWeight="SemiBold" />
                     </StackPanel>
-                    <TextBlock Text="—   □   ×" Foreground="#C35C85"
-                               FontSize="20" HorizontalAlignment="Right"
-                               VerticalAlignment="Center"/>
+                    <TextBlock Text="—   □   ×" Foreground="#C35C85" FontSize="20"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
 
                 <Border Grid.Row="1" Background="#303030" Padding="28">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="Administrator exit"
-                                   Foreground="White" FontSize="23"
-                                   FontWeight="SemiBold"
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock
-                            Text="Enter the administrator exit code to close kiosk mode."
-                            Foreground="#D0D0D0" FontSize="14"
-                            TextAlignment="Center" TextWrapping="Wrap"/>
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Administrator exit" Foreground="White"
+                                   FontSize="23" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="Enter the administrator exit code to close kiosk mode."
+                                   Foreground="#D0D0D0" FontSize="14"
+                                   TextAlignment="Center" TextWrapping="Wrap" />
 
                         <PasswordBox x:Name="MainExitCodeBox"
                                      PlaceholderText="Password"
                                      PasswordRevealMode="Hidden"
                                      MaxLength="4"
                                      InputScope="NumericPin"
-                                     Height="52"
+                                     Height="48"
                                      Background="#252525"
                                      Foreground="White"
                                      BorderBrush="#AAAAAA"
                                      BorderThickness="1"
-                                     Padding="12,8"/>
+                                     Padding="12,8" />
 
                         <TextBlock x:Name="MainExitErrorText"
                                    Foreground="#FF8A8A"
                                    Visibility="Collapsed"
                                    TextWrapping="Wrap"
-                                   TextAlignment="Center"/>
+                                   TextAlignment="Center" />
 
                         <Button Content="Submit"
-                                Width="200" Height="60"
+                                Width="160" Height="48"
                                 HorizontalAlignment="Center"
-                                Click="OnMainExitSubmit"/>
+                                Click="OnMainExitSubmit" />
 
-                        <TextBlock
-                            Text="Local kiosk demo • Code entry is processed on this device."
-                            Foreground="#AAAAAA" FontSize="12"
-                            TextAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="Training/demo screen • Enter the local administrator exit code only."
+                                   Foreground="#AAAAAA" FontSize="12"
+                                   TextAlignment="Center" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- Top warning card, deliberately labeled as a demo -->
+        <!-- Top notice. A fixed pixel width prevents the narrow vertical title seen in the photo. -->
         <Border Grid.Row="0"
-                Width="940" Height="148"
-                MaxWidth="92%"
+                Width="940" Height="136"
                 Background="#000000"
-                BorderBrush="#777777"
-                BorderThickness="1"
-                CornerRadius="5"
-                Padding="16"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top">
-            <StackPanel Spacing="12">
+                BorderBrush="#777777" BorderThickness="1"
+                CornerRadius="5" Padding="16"
+                HorizontalAlignment="Center" VerticalAlignment="Top">
+            <StackPanel Spacing="10">
                 <TextBlock Text="Security Awareness Demonstration"
                            Foreground="White" FontSize="18"
-                           TextAlignment="Center" TextWrapping="Wrap"/>
-                <TextBlock
-                    Text="Unexpected security warnings, urgent threats, and unsolicited support instructions can be signs of a scam. Verify alerts through trusted channels."
-                    Foreground="#EEEEEE" FontSize="15"
-                    TextAlignment="Center" TextWrapping="Wrap"/>
+                           TextAlignment="Center" TextWrapping="Wrap" />
+                <TextBlock Text="Unexpected security warnings, urgent threats, and unsolicited support instructions can be signs of a scam. Verify alerts through trusted channels."
+                           Foreground="#EEEEEE" FontSize="15"
+                           TextAlignment="Center" TextWrapping="Wrap" />
                 <TextBlock Text="DEMO — No real security incident"
-                           Foreground="White" FontSize="15"
-                           FontWeight="Bold" TextAlignment="Center"/>
+                           Foreground="White" FontSize="15" FontWeight="Bold"
+                           TextAlignment="Center" />
             </StackPanel>
         </Border>
 
-        <!-- Keep the existing Administrator exit command available too -->
+        <!-- Preserve the existing ViewModel command and original Administrator exit dialog. -->
         <Button Grid.Row="0"
                 Content="Administrator exit"
                 Command="{Binding ShowExitCommand}"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
                 Margin="0,0,20,20"
-                Padding="18,10"
-                IsTabStop="True"/>
+                Padding="18,10" />
     </Grid>
 </Page>
