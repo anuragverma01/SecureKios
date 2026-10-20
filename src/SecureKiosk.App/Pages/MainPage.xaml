@@ -126,15 +126,32 @@
 
                 <!-- White title bar -->
                 <Grid Grid.Row="0" Background="#FAFAFA">
-                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="22,8,0,8">
-                        <!-- <TextBlock Text="◆" Foreground="#1685D1" FontSize="31" /> -->
-                        <TextBlock Text="Microsoft Defender" Foreground="#202020" FontSize="20" FontWeight="SemiBold" />
-                    <!-- </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="13" Margin="0,8,22,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                VerticalAlignment="Center"
+                                Margin="22,8,0,8">
+                        <TextBlock Text="Microsoft Defender"
+                                   Foreground="#202020"
+                                   FontSize="20"
+                                   FontWeight="SemiBold" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Spacing="13"
+                                Margin="0,8,22,8">
                         <TextBlock Text="—" Foreground="#7A58B8" FontSize="24" />
                         <TextBlock Text="□" Foreground="#1D1D1D" FontSize="20" />
                         <TextBlock Text="×" Foreground="#E84576" FontSize="28" />
-                    </StackPanel> -->
+                    </StackPanel>
                 </Grid>
 
                 <!-- Dark form area -->
