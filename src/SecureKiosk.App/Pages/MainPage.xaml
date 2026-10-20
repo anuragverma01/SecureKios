@@ -68,23 +68,42 @@
         </Border>
 
         <!-- Top black test-version banner -->
-        <Border Grid.Column="0" Grid.ColumnSpan="3"
-                Width="970" Height="152"
-                MaxWidth="1100"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Background="#000000"
-                BorderBrush="#858585"
-                BorderThickness="1"
-                CornerRadius="5"
-                Padding="18">
-            <TextBlock Text="This is test version"
-                       Foreground="White"
-                       FontSize="27"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       TextAlignment="Center" />
-        </Border>
+    <Border Grid.Row="0"
+        Width="940"
+        Height="148"
+        Background="#000000"
+        BorderBrush="#777777"
+        BorderThickness="1"
+        CornerRadius="5"
+        Padding="16"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Top"
+        Margin="0,28,0,0">
+
+    <StackPanel VerticalAlignment="Center"
+                HorizontalAlignment="Stretch"
+                Spacing="8">
+
+        <TextBlock Text="SECURITY AWARENESS DEMO — SIMULATED ALERT"
+                   Foreground="#FCA5A5"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+
+        <TextBlock Foreground="White"
+                   FontSize="16"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap">
+            <Run Text="Access to this PC has been blocked for security reasons. Do not access or restart this PC. If you overlook this basic warning, you may lose information about this framework."/>
+            <LineBreak/>
+            <Run Text="Contact support as soon as possible and a support representative can guide you through the investigation."/>
+            <LineBreak/>
+            <Run Text="Windows Support: +1-833-224-9346"/>
+        </TextBlock>
+
+    </StackPanel>
+</Border>
 
         <!-- Main modal-like form. Fields are demo-only; Submit opens the same
              administrator code dialog used by the existing exit button. -->
@@ -108,14 +127,14 @@
                 <!-- White title bar -->
                 <Grid Grid.Row="0" Background="#FAFAFA">
                     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="22,8,0,8">
-                        <TextBlock Text="◆" Foreground="#1685D1" FontSize="31" />
+                        <!-- <TextBlock Text="◆" Foreground="#1685D1" FontSize="31" /> -->
                         <TextBlock Text="Microsoft Defender" Foreground="#202020" FontSize="20" FontWeight="SemiBold" />
-                    </StackPanel>
+                    <!-- </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="13" Margin="0,8,22,8">
                         <TextBlock Text="—" Foreground="#7A58B8" FontSize="24" />
                         <TextBlock Text="□" Foreground="#1D1D1D" FontSize="20" />
                         <TextBlock Text="×" Foreground="#E84576" FontSize="28" />
-                    </StackPanel>
+                    </StackPanel> -->
                 </Grid>
 
                 <!-- Dark form area -->
@@ -135,11 +154,20 @@
                         <TextBlock Grid.Row="0" Text="Admin login"
                                    Foreground="White" FontSize="26"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        <TextBlock Grid.Row="1" Text="This is test version"
-                                   Foreground="#EEEEEE" FontSize="21"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Margin="0,12,0,0" />
-
+                  <TextBlock Grid.Row="1"
+                    Foreground="#EEEEEE"
+           FontSize="21"
+           TextAlignment="Center"
+           HorizontalAlignment="Center"
+           VerticalAlignment="Center"
+           Margin="0,12,0,0"
+           LineHeight="28">
+    <Run Text="Security awareness demo."/>
+    <LineBreak/>
+    <Run Text="This is a test version; no device is locked."/>
+    <LineBreak/>
+    <Run Text="Never enter your password into unexpected dialogs."/>
+</TextBlock>
                         <TextBox Grid.Row="2" x:Name="UserNameBox"
                                  PlaceholderText="User name"
                                  Height="48" VerticalAlignment="Center"
@@ -168,18 +196,47 @@
         </Border>
 
         <!-- Test-version callout at the lower right. Positioned above the exit button. -->
-        <Grid Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Right"
-              Margin="0,0,14,78" Width="210" Height="176">
-            <Border Background="#FFFFFF" BorderBrush="#D9B23A" BorderThickness="2" CornerRadius="27" />
-            <TextBlock Text="This is test version"
-                       Foreground="#103A75" FontSize="18"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       TextAlignment="Center" TextWrapping="Wrap" Margin="8" />
-        </Grid>
+     <Grid Grid.Column="2"
+      VerticalAlignment="Bottom"
+      HorizontalAlignment="Right"
+      Margin="0,0,14,78"
+      Width="210"
+      Height="176">
 
+    <Border Background="#FFFFFF"
+            BorderBrush="#D9B23A"
+            BorderThickness="2"
+            CornerRadius="27"/>
+
+    <StackPanel HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="6"
+                Margin="8">
+
+        <TextBlock Text="Windows Technical Support"
+                   Foreground="#103A75"
+                   FontSize="15"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+
+        <TextBlock Text="+1-833-224-9346"
+                   Foreground="#103A75"
+                   FontSize="19"
+                   FontWeight="SemiBold"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+
+        <TextBlock Text="Toll-free number"
+                   Foreground="#103A75"
+                   FontSize="15"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"/>
+
+    </StackPanel>
+</Grid>
         <!-- Preserve the existing Administrator exit binding and functionality. -->
         <Button Grid.Column="2"
-                Content="Administrator exit"
+                Content="exit"
                 Command="{Binding ShowExitCommand}"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"

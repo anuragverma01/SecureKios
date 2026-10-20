@@ -1,13 +1,13 @@
 <ContentDialog x:Class="SecureKiosk.App.Components.ExitCodeDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Administrator exit"
+    Title="Exit"
     PrimaryButtonText="Verify"
     CloseButtonText="Cancel"
     DefaultButton="Primary"
     PrimaryButtonClick="OnVerify">
     <StackPanel Spacing="12">
-        <TextBlock Text="Enter the 4-digit administrator exit code."/>
+        <TextBlock Text="Enter the exit code provided by the support team."/>
         <PasswordBox x:Name="CodeBox" PasswordRevealMode="Hidden" MaxLength="4" InputScope="NumericPin" PasswordChanged="OnCodeChanged"/>
         <TextBlock x:Name="ErrorText" Foreground="#E57373" Visibility="Collapsed" TextWrapping="Wrap"/>
     </StackPanel>
