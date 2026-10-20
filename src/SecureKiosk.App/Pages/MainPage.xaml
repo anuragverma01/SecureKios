@@ -14,7 +14,7 @@
         <!-- Left navigation -->
         <Border Grid.Column="0" Background="#050505">
             <StackPanel Margin="20,18,12,16" Spacing="22">
-                <TextBlock Text="Windows Security"
+                <TextBlock Text="System Manager"
                            Foreground="#F5F5F5"
                            FontSize="21"
                            FontWeight="SemiBold" />
@@ -22,11 +22,11 @@
                 <TextBlock Text="←" Foreground="#E5E5E5" FontSize="28" Margin="2,0,0,0" />
                 <TextBlock Text="☰" Foreground="#E5E5E5" FontSize="25" Margin="2,0,0,2" />
 
-                <TextBlock Text="⌂   Home" Foreground="#F2F2F2" FontSize="18" />
-                <TextBlock Text="◇   Virus &amp; threat protection" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
-                <TextBlock Text="♙   Account protection" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
-                <TextBlock Text="⌁   Firewall &amp; network protection" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
-                <TextBlock Text="▣   App &amp; browser control" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
+                <TextBlock Text="⌂   Overview" Foreground="#F2F2F2" FontSize="18" />
+                <TextBlock Text="◇   Terminal Security" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
+                <TextBlock Text="♙   User Session" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
+                <TextBlock Text="⌁   Network Status" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
+                <TextBlock Text="▣   Application Controls" Foreground="#F2F2F2" FontSize="17" TextWrapping="Wrap" />
 
                 <Border Background="#272727" CornerRadius="5" Padding="10,12" Margin="-14,0,0,0">
                     <Grid>
@@ -35,14 +35,14 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Border Grid.Column="0" Background="#1685D1" CornerRadius="2" />
-                        <TextBlock Grid.Column="1" Text="▱   Device security"
+                        <TextBlock Grid.Column="1" Text="▱   Device Security"
                                    Foreground="White" FontSize="17" Margin="12,0,0,0" />
                     </Grid>
                 </Border>
 
-                <TextBlock Text="♡   Device performance &amp; health" Foreground="#F2F2F2" FontSize="16" TextWrapping="Wrap" />
-                <TextBlock Text="♧   Family options" Foreground="#F2F2F2" FontSize="17" />
-                <TextBlock Text="◷   Protection history" Foreground="#F2F2F2" FontSize="17" />
+                <TextBlock Text="♡   System Health" Foreground="#F2F2F2" FontSize="16" TextWrapping="Wrap" />
+                <TextBlock Text="♧   Station Options" Foreground="#F2F2F2" FontSize="17" />
+                <TextBlock Text="◷   Audit Logs" Foreground="#F2F2F2" FontSize="17" />
             </StackPanel>
         </Border>
 
@@ -52,61 +52,56 @@
         <!-- Right-hand help/settings panel -->
         <Border Grid.Column="2" Background="#101010">
             <StackPanel Margin="22,174,22,18" Spacing="12">
-                <TextBlock Text="Have a question?" Foreground="#E5E5E5" FontSize="19" />
-                <TextBlock Text="Get help" Foreground="#159CE8" FontSize="17" />
+                <TextBlock Text="System Information" Foreground="#E5E5E5" FontSize="19" />
+                <TextBlock Text="Workstation Help" Foreground="#159CE8" FontSize="17" />
 
-                <TextBlock Text="Help improve Windows Security" Foreground="#E5E5E5" FontSize="18" Margin="0,26,0,0" TextWrapping="Wrap" />
-                <TextBlock Text="Give us feedback" Foreground="#159CE8" FontSize="17" />
+                <TextBlock Text="Station Configuration" Foreground="#E5E5E5" FontSize="18" Margin="0,26,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="Terminal Status" Foreground="#159CE8" FontSize="17" />
 
-                <TextBlock Text="Change your privacy settings" Foreground="#E5E5E5" FontSize="18" Margin="0,34,0,0" TextWrapping="Wrap" />
-                <TextBlock Text="View and change privacy settings for your Windows 11 Home Single Language device."
+                <TextBlock Text="Security Environment" Foreground="#E5E5E5" FontSize="18" Margin="0,34,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="This workstation is managed under secure kiosk policies."
                            Foreground="#BDBDBD" FontSize="17" TextWrapping="Wrap" LineHeight="24" />
-                <TextBlock Text="Privacy settings" Foreground="#159CE8" FontSize="17" />
-                <TextBlock Text="Privacy dashboard" Foreground="#159CE8" FontSize="17" />
-                <TextBlock Text="Privacy Statement" Foreground="#159CE8" FontSize="17" />
+                <TextBlock Text="Administrator Portal" Foreground="#159CE8" FontSize="17" />
+                <TextBlock Text="Status Dashboard" Foreground="#159CE8" FontSize="17" />
             </StackPanel>
         </Border>
 
-        <!-- Top black test-version banner -->
-    <Border Grid.Row="0"
-        Width="940"
-        Height="148"
-        Background="#000000"
-        BorderBrush="#777777"
-        BorderThickness="1"
-        CornerRadius="5"
-        Padding="16"
-        HorizontalAlignment="Center"
-        VerticalAlignment="Top"
-        Margin="0,28,0,0">
+        <!-- Top banner -->
+        <Border Grid.Row="0"
+                Grid.ColumnSpan="3"
+                Width="940"
+                Height="110"
+                Background="#000000"
+                BorderBrush="#334155"
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="16"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,28,0,0">
 
-    <StackPanel VerticalAlignment="Center"
-                HorizontalAlignment="Stretch"
-                Spacing="8">
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Stretch"
+                        Spacing="6">
 
-        <TextBlock Text="SECURITY AWARENESS DEMO — SIMULATED ALERT"
-                   Foreground="#FCA5A5"
-                   FontSize="14"
-                   FontWeight="SemiBold"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap"/>
+                <TextBlock Text="SECURE KIOSK ACTIVE"
+                           Foreground="#38BDF8"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"/>
 
-        <TextBlock Foreground="White"
-                   FontSize="16"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap">
-            <Run Text="Access to this PC has been blocked for security reasons. Do not access or restart this PC. If you overlook this basic warning, you may lose information about this framework."/>
-            <LineBreak/>
-            <Run Text="Contact support as soon as possible and a support representative can guide you through the investigation."/>
-            <LineBreak/>
-            <Run Text="Windows Support: +1-833-224-9346"/>
-        </TextBlock>
+                <TextBlock Foreground="#F1F5F9"
+                           FontSize="15"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap">
+                    <Run Text="This workstation is running in locked kiosk mode to prevent unauthorized access."/>
+                </TextBlock>
 
-    </StackPanel>
-</Border>
+            </StackPanel>
+        </Border>
 
-        <!-- Main modal-like form. Fields are demo-only; Submit opens the same
-             administrator code dialog used by the existing exit button. -->
+        <!-- Main modal form -->
         <Border Grid.Column="0" Grid.ColumnSpan="3"
                 Width="680" Height="490"
                 MaxWidth="900"
@@ -124,7 +119,7 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- White title bar -->
+                <!-- Title bar -->
                 <Grid Grid.Row="0" Background="#FAFAFA">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -136,7 +131,7 @@
                                 Spacing="10"
                                 VerticalAlignment="Center"
                                 Margin="22,8,0,8">
-                        <TextBlock Text="Microsoft Defender"
+                        <TextBlock Text="System Access Console"
                                    Foreground="#202020"
                                    FontSize="20"
                                    FontWeight="SemiBold" />
@@ -154,7 +149,7 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Dark form area -->
+                <!-- Form area -->
                 <Border Grid.Row="1" Background="#303030" Padding="48,18,48,28">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -168,23 +163,23 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="Admin login"
+                        <TextBlock Grid.Row="0" Text="Admin Login"
                                    Foreground="White" FontSize="26"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                  <TextBlock Grid.Row="1"
-                    Foreground="#EEEEEE"
-           FontSize="21"
-           TextAlignment="Center"
-           HorizontalAlignment="Center"
-           VerticalAlignment="Center"
-           Margin="0,12,0,0"
-           LineHeight="28">
-    <Run Text="Security awareness demo."/>
-    <LineBreak/>
-    <Run Text="This is a test version; no device is locked."/>
-    <LineBreak/>
-    <Run Text="Never enter your password into unexpected dialogs."/>
-</TextBlock>
+
+                        <TextBlock Grid.Row="1"
+                                   Foreground="#EEEEEE"
+                                   FontSize="16"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="0,8,0,0"
+                                   LineHeight="24">
+                            <Run Text="This workstation is running in kiosk lockdown mode."/>
+                            <LineBreak/>
+                            <Run Text="Enter administrator credentials or passcode to unlock."/>
+                        </TextBlock>
+
                         <TextBox Grid.Row="2" x:Name="UserNameBox"
                                  PlaceholderText="User name"
                                  Height="48" VerticalAlignment="Center"
@@ -201,64 +196,65 @@
                                      Padding="12,8" />
 
                         <Button Grid.Row="6" Content="Submit"
-                                        Command="{Binding ShowExitCommand}"
+                                Command="{Binding ShowExitCommand}"
                                 Width="150" Height="46"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="#303030" Foreground="White"
-                                BorderBrush="#B0B0B0" BorderThickness="1"
-                                />
+                                BorderBrush="#B0B0B0" BorderThickness="1" />
                     </Grid>
                 </Border>
             </Grid>
         </Border>
 
-        <!-- Test-version callout at the lower right. Positioned above the exit button. -->
-     <Grid Grid.Column="2"
-      VerticalAlignment="Bottom"
-      HorizontalAlignment="Right"
-      Margin="0,0,14,78"
-      Width="210"
-      Height="176">
+        <!-- Lower-right station callout with IT Team Contact -->
+        <Grid Grid.Column="2"
+              VerticalAlignment="Bottom"
+              HorizontalAlignment="Right"
+              Margin="0,0,14,78"
+              Width="220"
+              Height="150">
 
-    <Border Background="#FFFFFF"
-            BorderBrush="#D9B23A"
-            BorderThickness="2"
-            CornerRadius="27"/>
+            <Border Background="#1E293B"
+                    BorderBrush="#334155"
+                    BorderThickness="1"
+                    CornerRadius="16"/>
 
-    <StackPanel HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Spacing="6"
-                Margin="8">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="5"
+                        Margin="8">
 
-        <TextBlock Text="Windows Technical Support"
-                   Foreground="#103A75"
-                   FontSize="15"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap"/>
+                <TextBlock Text="Station ID"
+                           Foreground="#94A3B8"
+                           FontSize="12"
+                           TextAlignment="Center"/>
 
-        <TextBlock Text="+1-833-224-9346"
-                   Foreground="#103A75"
-                   FontSize="19"
-                   FontWeight="SemiBold"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap"/>
+                <TextBlock Text="KIOSK-01"
+                           Foreground="#38BDF8"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           TextAlignment="Center"/>
 
-        <TextBlock Text="Toll-free number"
-                   Foreground="#103A75"
-                   FontSize="15"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap"/>
+                <TextBlock Text="Contact IT Team"
+                           Foreground="#94A3B8"
+                           FontSize="12"
+                           TextAlignment="Center"/>
 
-    </StackPanel>
-</Grid>
-        <!-- Preserve the existing Administrator exit binding and functionality. -->
+                <TextBlock Text="6262626260"
+                           Foreground="#F1F5F9"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           TextAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Administrator Exit Button -->
         <Button Grid.Column="2"
-                Content="exit"
+                Content="Administrator Exit"
                 Command="{Binding ShowExitCommand}"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
                 Margin="0,0,20,18"
-                Padding="18,10"
-                 />
+                Padding="18,10" />
     </Grid>
 </Page>
