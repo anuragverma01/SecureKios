@@ -140,14 +140,14 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Margin="0,12,0,0" />
 
-                        <TextBox Grid.Row="2" x:Name="DemoUserNameBox"
+                        <TextBox Grid.Row="2" x:Name="UserNameBox"
                                  PlaceholderText="User name"
                                  Height="48" VerticalAlignment="Center"
                                  Background="#252525" Foreground="White"
                                  BorderBrush="#A0A0A0" BorderThickness="1"
                                  Padding="12,8" />
 
-                        <PasswordBox Grid.Row="4" x:Name="DemoPasswordBox"
+                        <PasswordBox Grid.Row="4" x:Name="PasswordBox"
                                      PlaceholderText="Password"
                                      PasswordRevealMode="Hidden"
                                      Height="48" VerticalAlignment="Center"
@@ -156,11 +156,12 @@
                                      Padding="12,8" />
 
                         <Button Grid.Row="6" Content="Submit"
+                                        Command="{Binding ShowExitCommand}"
                                 Width="150" Height="46"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="#303030" Foreground="White"
                                 BorderBrush="#B0B0B0" BorderThickness="1"
-                                Click="OnDemoSubmit" />
+                                />
                     </Grid>
                 </Border>
             </Grid>
@@ -184,6 +185,6 @@
                 VerticalAlignment="Bottom"
                 Margin="0,0,20,18"
                 Padding="18,10"
-                IsTabStop="True" />
+                 />
     </Grid>
 </Page>
